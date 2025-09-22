@@ -1,173 +1,151 @@
 /**
- * 博客统计客户端 JavaScript
- * 用于在博客页面中记录访问和显示统计信息
+ * Busuanzi 兼容脚本
+ * 替代原版不蒜子统计，使用自定义API
  */
 
-class BlogStats {
-  constructor(apiBaseUrl) {
-    this.apiBaseUrl = apiBaseUrl.replace(/\/$/, '');
-    this.visited = new Set();
-  }
-
-  async recordVisit(path = null, referrer = null) {
+(function() {
+  'use strict';
+  
+  const API_BASE = 'https://stats.lpblog.dpdns.org';
+  let visitRecorded = false;
+  
+  // 记录访问
+  async function recordVisit() {
+    if (visitRecorded) return;
+    
     try {
-      // 使用当前路径或提供的路径
-      const visitPath = path || window.location.pathname;
-      
-      // 防止重复记录同一页面
-      if (this.visited.has(visitPath)) {
-        return;
-      }
-      
-      const response = await fetch(`${this.apiBaseUrl}/api/visit`, {
+      const response = await fetch(`${API_BASE}/api/visit`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          path: visitPath,
-          referrer: referrer || document.referrer
+          path: window.location.pathname,
+          referrer: document.referrer
         })
       });
       
       if (response.ok) {
-        this.visited.add(visitPath);
-        console.log('Visit recorded:', visitPath);
+        visitRecorded = true;
+        console.log('Visit recorded successfully');
       }
     } catch (error) {
       console.error('Failed to record visit:', error);
     }
   }
-
-  async getStats(type = 'summary', options = {}) {
+  
+  // 获取统计数据
+  async function fetchStats() {
     try {
-      const params = new URLSearchParams();
-      params.append('type', type);
+      // 获取总体统计
+      const summaryResponse = await fetch(`${API_BASE}/api/stats?type=summary`);
+      const summaryResult = await summaryResponse.json();
       
-      // 添加额外参数
-      Object.keys(options).forEach(key => {
-        if (options[key] !== undefined) {
-          params.append(key, options[key]);
-        }
-      });
+      // 获取当前页面统计
+      const pageResponse = await fetch(`${API_BASE}/api/stats?type=page&path=${encodeURIComponent(window.location.pathname)}`);
+      const pageResult = await pageResponse.json();
       
-      const response = await fetch(`${this.apiBaseUrl}/api/stats?${params}`);
-      const result = await response.json();
-      
-      if (result.success) {
-        return result.data;
-      } else {
-        throw new Error(result.error);
+      if (summaryResult.success && summaryResult.data) {
+        updateSiteStats(summaryResult.data);
       }
+      
+      if (pageResult.success && pageResult.data) {
+        updatePageStats(pageResult.data);
+      }
+      
     } catch (error) {
       console.error('Failed to fetch stats:', error);
-      return null;
     }
   }
-
-  /**
-   * 获取总体统计
-   */
-  async getSummary() {
-    return await this.getStats('summary');
+  
+  // 更新站点统计
+  function updateSiteStats(data) {
+    // 站点总访问量
+    updateElements([
+      '#busuanzi_value_site_pv',
+      '.site-pv',
+      '[data-busuanzi-value="site_pv"]'
+    ], data.total_pv || 0);
+    
+    // 站点独立访客
+    updateElements([
+      '#busuanzi_value_site_uv', 
+      '.site-uv',
+      '[data-busuanzi-value="site_uv"]'
+    ], data.total_uv || 0);
+    
+    // 显示统计容器
+    showElements([
+      '#busuanzi_container_site_pv',
+      '#busuanzi_container_site_uv',
+      '.busuanzi_container_site_pv',
+      '.busuanzi_container_site_uv'
+    ]);
   }
-
-  /**
-   * 获取每日统计
-   */
-  async getDailyStats(days = 30) {
-    return await this.getStats('daily', { days });
+  
+  // 更新页面统计
+  function updatePageStats(data) {
+    // 页面访问量
+    updateElements([
+      '#busuanzi_value_page_pv',
+      '.page-pv',
+      '[data-busuanzi-value="page_pv"]'
+    ], data.page_pv || 0);
+    
+    // 显示页面统计容器
+    showElements([
+      '#busuanzi_container_page_pv',
+      '.busuanzi_container_page_pv'
+    ]);
   }
-
-  /**
-   * 获取页面统计
-   */
-  async getPageStats(path = null) {
-    return await this.getStats('page', { path });
-  }
-
-  /**
-   * 获取最近访问
-   */
-  async getRecentVisits(days = 7) {
-    return await this.getStats('recent', { days });
-  }
-
-  /**
-   * 显示统计信息到指定元素
-   */
-  async displayStats(elementId, type = 'summary') {
-    const element = document.getElementById(elementId);
-    if (!element) {
-      console.error('Element not found:', elementId);
-      return;
-    }
-
-    try {
-      const stats = await this.getStats(type);
-      if (!stats) {
-        element.innerHTML = '<p>统计数据加载失败</p>';
-        return;
-      }
-
-      let html = '';
-      
-      switch (type) {
-        case 'summary':
-          html = `
-            <div class="blog-stats-summary">
-              <div class="stat-item">
-                <span class="stat-label">总访问量:</span>
-                <span class="stat-value">${stats.total_pv || 0}</span>
-              </div>
-              <div class="stat-item">
-                <span class="stat-label">独立访客:</span>
-                <span class="stat-value">${stats.total_uv || 0}</span>
-              </div>
-              <div class="stat-item">
-                <span class="stat-label">活跃天数:</span>
-                <span class="stat-value">${stats.active_days || 0}</span>
-              </div>
-            </div>
-          `;
-          break;
-          
-        case 'page':
-          if (Array.isArray(stats)) {
-            html = '<div class="blog-stats-pages"><h4>热门页面</h4><ul>';
-            stats.slice(0, 10).forEach(page => {
-              html += `<li>${page.path} (${page.page_pv} 次访问)</li>`;
-            });
-            html += '</ul></div>';
-          } else {
-            html = `
-              <div class="blog-stats-page">
-                <p>当前页面访问量: ${stats.page_pv || 0}</p>
-                <p>独立访客: ${stats.page_uv || 0}</p>
-              </div>
-            `;
-          }
-          break;
-      }
-      
-      element.innerHTML = html;
-    } catch (error) {
-      console.error('Failed to display stats:', error);
-      element.innerHTML = '<p>统计数据显示失败</p>';
-    }
-  }
-
-  init() {
-    if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', () => {
-        this.recordVisit();
+  
+  // 更新元素内容
+  function updateElements(selectors, value) {
+    selectors.forEach(selector => {
+      const elements = document.querySelectorAll(selector);
+      elements.forEach(el => {
+        if (el) {
+          el.textContent = value;
+        }
       });
-    } else {
-      this.recordVisit();
-    }
+    });
   }
-}
-
-if (typeof window !== 'undefined') {
-  window.BlogStats = BlogStats;
-}
+  
+  // 显示元素
+  function showElements(selectors) {
+    selectors.forEach(selector => {
+      const elements = document.querySelectorAll(selector);
+      elements.forEach(el => {
+        if (el) {
+          el.style.display = '';
+          el.style.visibility = 'visible';
+        }
+      });
+    });
+  }
+  
+  // 初始化
+  function init() {
+    // 记录访问
+    recordVisit();
+    
+    // 延迟获取统计数据，确保页面元素已加载
+    setTimeout(() => {
+      fetchStats();
+    }, 1000);
+  }
+  
+  // 页面加载完成后初始化
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+  
+  // 兼容原版busuanzi的全局变量
+  window.busuanzi = {
+    fetch: fetchStats,
+    record: recordVisit
+  };
+  
+})();
