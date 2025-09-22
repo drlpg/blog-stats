@@ -50,9 +50,9 @@ class BlogStats {
       const params = new URLSearchParams();
       params.append('type', type);
       
-      // 添加额外参数
+      // 添加额外参数，但跳过 null 和 undefined 值
       Object.keys(options).forEach(key => {
-        if (options[key] !== undefined) {
+        if (options[key] !== undefined && options[key] !== null) {
           params.append(key, options[key]);
         }
       });
