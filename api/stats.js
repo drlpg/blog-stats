@@ -122,6 +122,12 @@ async function getPageStats(res, specificPath) {
         return errorResponse(res, 'Failed to fetch page stats', 500);
       }
       
+      console.log('Visits data:', visits); // 调试日志
+      
+      if (!visits || visits.length === 0) {
+        return successResponse(res, []);
+      }
+      
       // 按页面分组统计
       const pageStatsMap = {};
       visits.forEach(visit => {
@@ -142,6 +148,8 @@ async function getPageStats(res, specificPath) {
         page_pv: stats.page_pv,
         page_uv: stats.unique_ips.size
       })).sort((a, b) => b.page_pv - a.page_pv).slice(0, 50);
+      
+      console.log('Page stats result:', pageStats); // 调试日志
       
       return successResponse(res, pageStats);
     }
