@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>博客统计 API</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .api-endpoint {
+            background: #f8f9fa;
+            padding: 10px;
+            border-left: 4px solid #007cba;
+            margin: 10px 0;
+            font-family: monospace;
+        }
+        .button {
+            display: inline-block;
+            background: #007cba;
+            color: white;
+            padding: 10px 20px;
+            text-decoration: none;
+            border-radius: 4px;
+            margin: 10px 10px 10px 0;
+        }
+        .button:hover {
+            background: #005a87;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 博客统计 API</h1>
+        <p>基于 Vercel + Supabase 的博客访问统计系统</p>
+        
+        <h2>📊 API 端点</h2>
+        <div class="api-endpoint">POST /api/visit - 记录访问</div>
+        <div class="api-endpoint">GET /api/stats?type=summary - 获取总体统计</div>
+        <div class="api-endpoint">GET /api/stats?type=daily&days=30 - 获取每日统计</div>
+        <div class="api-endpoint">GET /api/stats?type=page - 获取页面统计</div>
+        
+        <h2>🧪 测试工具</h2>
+        <a href="/test.html" class="button">API 测试页面</a>
+        <a href="/client/blog-stats.js" class="button">JavaScript 客户端</a>
+        
+        <h2>📖 使用说明</h2>
+        <p>这是一个博客统计 API 服务，提供访问记录和统计查询功能。</p>
+        <p>支持 PV/UV 统计、防重复访问、多维度统计等功能。</p>
+    </div>
+</body>
+</html>
