@@ -163,11 +163,40 @@
   window.BlogStats = function(apiUrl) {
     this.apiBaseUrl = apiUrl || API_BASE;
     this.recordVisit = recordVisit;
+    
+    // 获取总体统计
     this.getSummary = async () => {
       const response = await fetch(`${this.apiBaseUrl}/api/stats?type=summary`);
       const result = await response.json();
       return result.success ? result.data : null;
     };
+    
+    // 获取每日统计
+    this.getDailyStats = async (days = 30) => {
+      const response = await fetch(`${this.apiBaseUrl}/api/stats?type=daily&days=${days}`);
+      const result = await response.json();
+      return result.success ? result.data : null;
+    };
+    
+    // 获取页面统计
+    this.getPageStats = async (path = null) => {
+      let url = `${this.apiBaseUrl}/api/stats?type=page`;
+      if (path) {
+        url += `&path=${encodeURIComponent(path)}`;
+      }
+      const response = await fetch(url);
+      const result = await response.json();
+      return result.success ? result.data : null;
+    };
+    
+    // 获取最近访问
+    this.getRecentVisits = async (days = 7) => {
+      const response = await fetch(`${this.apiBaseUrl}/api/stats?type=recent&days=${days}`);
+      const result = await response.json();
+      return result.success ? result.data : null;
+    };
+    
+    console.log('📦 BlogStats 类已创建（包含所有方法）');
   };
   
   // 启动初始化

@@ -1,550 +1,661 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>博客统计 API 测试</title>
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 20px;
-            line-height: 1.6;
-        }
-        .container {
-            background: #f5f5f5;
-            padding: 20px;
-            border-radius: 8px;
-            margin: 20px 0;
-        }
-        .status {
-            padding: 15px;
-            margin: 10px 0;
-            border-radius: 5px;
-        }
-        .success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
-        .error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
-        .info { background: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
-        button {
-            background: #007cba;
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 4px;
-            cursor: pointer;
-            margin: 5px;
-        }
-        button:hover {
-            background: #005a87;
-        }
-        .stats-display {
-            background: white;
-            padding: 15px;
-            border-radius: 4px;
-            margin: 10px 0;
-            border-left: 4px solid #007cba;
-        }
-        .stat-item {
-            display: inline-block;
-            margin: 10px 20px 10px 0;
-        }
-        .stat-label {
-            font-weight: bold;
-            color: #666;
-        }
-        .stat-value {
-            color: #007cba;
-            font-size: 1.2em;
-            margin-left: 10px;
-        }
-        pre {
-            background: #f8f8f8;
-            padding: 15px;
-            border-radius: 4px;
-            overflow-x: auto;
-            max-height: 300px;
-            overflow-y: auto;
-            font-size: 12px;
-        }
+      body {
+        font-family: Arial, sans-serif;
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 20px;
+        line-height: 1.6;
+      }
+      .container {
+        background: #f5f5f5;
+        padding: 20px;
+        border-radius: 8px;
+        margin: 20px 0;
+      }
+      .status {
+        padding: 15px;
+        margin: 10px 0;
+        border-radius: 5px;
+      }
+      .success {
+        background: #d4edda;
+        color: #155724;
+        border: 1px solid #c3e6cb;
+      }
+      .error {
+        background: #f8d7da;
+        color: #721c24;
+        border: 1px solid #f5c6cb;
+      }
+      .info {
+        background: #d1ecf1;
+        color: #0c5460;
+        border: 1px solid #bee5eb;
+      }
+      button {
+        background: #007cba;
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 4px;
+        cursor: pointer;
+        margin: 5px;
+      }
+      button:hover {
+        background: #005a87;
+      }
+      .stats-display {
+        background: white;
+        padding: 15px;
+        border-radius: 4px;
+        margin: 10px 0;
+        border-left: 4px solid #007cba;
+      }
+      .stat-item {
+        display: inline-block;
+        margin: 10px 20px 10px 0;
+      }
+      .stat-label {
+        font-weight: bold;
+        color: #666;
+      }
+      .stat-value {
+        color: #007cba;
+        font-size: 1.2em;
+        margin-left: 10px;
+      }
+      pre {
+        background: #f8f8f8;
+        padding: 15px;
+        border-radius: 4px;
+        overflow-x: auto;
+        max-height: 300px;
+        overflow-y: auto;
+        font-size: 12px;
+      }
     </style>
-</head>
-<body>
+  </head>
+  <body>
     <h1>博客统计 API 测试页面</h1>
-    
-    <div id="script-status" class="status info">
-        🔄 正在检查脚本加载状态...
-    </div>
-    
+
+    <div id="script-status" class="status info">🔄 正在检查脚本加载状态...</div>
+
     <div class="container">
-        <h2>脚本状态检查</h2>
-        <button onclick="checkScriptStatus()">检查脚本状态</button>
-        <button onclick="testBlogStats()">测试BlogStats类</button>
-        <button onclick="testBusuanzi()">测试Busuanzi兼容</button>
-        <button onclick="clearLog()">清空日志</button>
-        <div id="script-test-result"></div>
+      <h2>脚本状态检查</h2>
+      <button onclick="checkScriptStatus()">检查脚本状态</button>
+      <button onclick="testBlogStats()">测试BlogStats类</button>
+      <button onclick="testBusuanzi()">测试Busuanzi兼容</button>
+      <button onclick="clearLog()">清空日志</button>
+      <div id="script-test-result"></div>
     </div>
-    
+
     <div class="container">
-        <h2>API配置</h2>
-        <label for="apiUrl">API 基础 URL:</label>
-        <input type="text" id="apiUrl" value="https://stats.lpblog.dpdns.org" style="width: 300px; padding: 5px;">
-        <button onclick="initStats()">初始化</button>
+      <h2>API配置</h2>
+      <label for="apiUrl">API 基础 URL:</label>
+      <input
+        type="text"
+        id="apiUrl"
+        value="https://stats.lpblog.dpdns.org"
+        style="width: 300px; padding: 5px"
+      />
+      <button onclick="initStats()">初始化</button>
     </div>
-    
+
     <div class="container">
-        <h2>访问记录测试</h2>
-        <button onclick="recordVisit()">记录当前页面访问</button>
-        <button onclick="recordCustomVisit()">记录自定义路径访问</button>
-        <button onclick="testAPIDirectly()">直接测试API</button>
-        <div id="visit-result"></div>
+      <h2>访问记录测试</h2>
+      <button onclick="recordVisit()">记录当前页面访问</button>
+      <button onclick="recordCustomVisit()">记录自定义路径访问</button>
+      <button onclick="testAPIDirectly()">直接测试API</button>
+      <div id="visit-result"></div>
     </div>
-    
+
     <div class="container">
-        <h2>统计查询测试</h2>
-        <button onclick="getSummary()">获取总体统计</button>
-        <button onclick="getDailyStats()">获取每日统计</button>
-        <button onclick="getPageStats()">获取页面统计</button>
-        <button onclick="getRecentVisits()">获取最近访问</button>
-        
-        <div id="stats-summary" class="stats-display" style="display: none;">
-            <h3>总体统计</h3>
-            <div id="summary-content"></div>
-        </div>
-        
-        <div id="stats-daily" class="stats-display" style="display: none;">
-            <h3>每日统计</h3>
-            <div id="daily-content"></div>
-        </div>
-        
-        <div id="stats-page" class="stats-display" style="display: none;">
-            <h3>页面统计</h3>
-            <div id="page-content"></div>
-        </div>
-        
-        <div id="stats-recent" class="stats-display" style="display: none;">
-            <h3>最近访问</h3>
-            <div id="recent-content"></div>
-        </div>
+      <h2>统计查询测试</h2>
+      <button onclick="getSummary()">获取总体统计</button>
+      <button onclick="getDailyStats()">获取每日统计</button>
+      <button onclick="getPageStats()">获取页面统计</button>
+      <button onclick="getRecentVisits()">获取最近访问</button>
+
+      <div id="stats-summary" class="stats-display" style="display: none">
+        <h3>总体统计</h3>
+        <div id="summary-content"></div>
+      </div>
+
+      <div id="stats-daily" class="stats-display" style="display: none">
+        <h3>每日统计</h3>
+        <div id="daily-content"></div>
+      </div>
+
+      <div id="stats-page" class="stats-display" style="display: none">
+        <h3>页面统计</h3>
+        <div id="page-content"></div>
+      </div>
+
+      <div id="stats-recent" class="stats-display" style="display: none">
+        <h3>最近访问</h3>
+        <div id="recent-content"></div>
+      </div>
     </div>
-    
+
     <div class="container">
-        <h2>实时日志</h2>
-        <pre id="console-log"></pre>
+      <h2>实时日志</h2>
+      <pre id="console-log"></pre>
     </div>
-    
+
     <div class="container">
-        <h2>原始 API 响应</h2>
-        <pre id="raw-response"></pre>
+      <h2>原始 API 响应</h2>
+      <pre id="raw-response"></pre>
     </div>
 
     <script>
-        let blogStats = null;
-        
-        // 日志系统
-        const logElement = document.getElementById('console-log');
-        
-        function addLog(type, message) {
-            const timestamp = new Date().toLocaleTimeString();
-            logElement.textContent += `[${timestamp}] ${type}: ${message}\n`;
-            logElement.scrollTop = logElement.scrollHeight;
+      let blogStats = null;
+
+      // 日志系统
+      const logElement = document.getElementById("console-log");
+
+      function addLog(type, message) {
+        const timestamp = new Date().toLocaleTimeString();
+        logElement.textContent += `[${timestamp}] ${type}: ${message}\n`;
+        logElement.scrollTop = logElement.scrollHeight;
+      }
+
+      const originalLog = console.log;
+      const originalError = console.error;
+
+      console.log = function (...args) {
+        originalLog.apply(console, args);
+        addLog("LOG", args.join(" "));
+      };
+
+      console.error = function (...args) {
+        originalError.apply(console, args);
+        addLog("ERROR", args.join(" "));
+      };
+
+      function clearLog() {
+        logElement.textContent = "";
+      }
+
+      // 脚本状态检查函数
+      function checkScriptStatus() {
+        const statusEl = document.getElementById("script-status");
+        const resultEl = document.getElementById("script-test-result");
+
+        if (typeof BlogStats !== "undefined") {
+          statusEl.className = "status success";
+          statusEl.innerHTML = "✅ BlogStats 类已成功加载";
+          resultEl.innerHTML =
+            '<div class="status success">✅ BlogStats 类可用</div>';
+          console.log("BlogStats 类检查通过");
+        } else if (typeof window.busuanzi !== "undefined") {
+          statusEl.className = "status success";
+          statusEl.innerHTML = "✅ Busuanzi 兼容接口已加载";
+          resultEl.innerHTML =
+            '<div class="status success">✅ Busuanzi 兼容接口可用</div>';
+          console.log("Busuanzi 兼容接口检查通过");
+        } else {
+          statusEl.className = "status error";
+          statusEl.innerHTML = "❌ 脚本未正确加载";
+          resultEl.innerHTML =
+            '<div class="status error">❌ 脚本未正确加载，请检查网络连接和文件路径</div>';
+          console.error("脚本加载失败");
         }
-        
-        const originalLog = console.log;
-        const originalError = console.error;
-        
-        console.log = function(...args) {
-            originalLog.apply(console, args);
-            addLog('LOG', args.join(' '));
-        };
-        
-        console.error = function(...args) {
-            originalError.apply(console, args);
-            addLog('ERROR', args.join(' '));
-        };
-        
-        function clearLog() {
-            logElement.textContent = '';
+      }
+
+      function testBlogStats() {
+        const resultEl = document.getElementById("script-test-result");
+
+        if (typeof BlogStats !== "undefined") {
+          try {
+            const stats = new BlogStats();
+            resultEl.innerHTML =
+              '<div class="status success">✅ BlogStats 类实例化成功</div>';
+            console.log("BlogStats 测试成功");
+
+            // 测试getSummary方法
+            stats
+              .getSummary()
+              .then((data) => {
+                console.log("getSummary 结果:", data);
+                resultEl.innerHTML +=
+                  '<div class="status success">✅ getSummary 方法调用成功</div>';
+              })
+              .catch((error) => {
+                console.error("getSummary 失败:", error);
+                resultEl.innerHTML +=
+                  '<div class="status error">❌ getSummary 方法调用失败</div>';
+              });
+          } catch (error) {
+            resultEl.innerHTML =
+              '<div class="status error">❌ BlogStats 实例化失败: ' +
+              error.message +
+              "</div>";
+            console.error("BlogStats 实例化失败:", error);
+          }
+        } else {
+          resultEl.innerHTML =
+            '<div class="status error">❌ BlogStats 类未定义</div>';
+          console.error("BlogStats 类未定义");
         }
-        
-        // 脚本状态检查函数
-        function checkScriptStatus() {
-            const statusEl = document.getElementById('script-status');
-            const resultEl = document.getElementById('script-test-result');
-            
-            if (typeof BlogStats !== 'undefined') {
-                statusEl.className = 'status success';
-                statusEl.innerHTML = '✅ BlogStats 类已成功加载';
-                resultEl.innerHTML = '<div class="status success">✅ BlogStats 类可用</div>';
-                console.log('BlogStats 类检查通过');
-            } else if (typeof window.busuanzi !== 'undefined') {
-                statusEl.className = 'status success';
-                statusEl.innerHTML = '✅ Busuanzi 兼容接口已加载';
-                resultEl.innerHTML = '<div class="status success">✅ Busuanzi 兼容接口可用</div>';
-                console.log('Busuanzi 兼容接口检查通过');
-            } else {
-                statusEl.className = 'status error';
-                statusEl.innerHTML = '❌ 脚本未正确加载';
-                resultEl.innerHTML = '<div class="status error">❌ 脚本未正确加载，请检查网络连接和文件路径</div>';
-                console.error('脚本加载失败');
-            }
+      }
+
+      function testBusuanzi() {
+        const resultEl = document.getElementById("script-test-result");
+
+        if (typeof window.busuanzi !== "undefined") {
+          resultEl.innerHTML =
+            '<div class="status success">✅ Busuanzi 兼容接口可用</div>';
+          console.log("Busuanzi 兼容测试成功");
+        } else {
+          resultEl.innerHTML =
+            '<div class="status error">❌ Busuanzi 兼容接口未定义</div>';
+          console.error("Busuanzi 兼容接口未定义");
         }
-        
-        function testBlogStats() {
-            const resultEl = document.getElementById('script-test-result');
-            
-            if (typeof BlogStats !== 'undefined') {
-                try {
-                    const stats = new BlogStats();
-                    resultEl.innerHTML = '<div class="status success">✅ BlogStats 类实例化成功</div>';
-                    console.log('BlogStats 测试成功');
-                    
-                    // 测试getSummary方法
-                    stats.getSummary().then(data => {
-                        console.log('getSummary 结果:', data);
-                        resultEl.innerHTML += '<div class="status success">✅ getSummary 方法调用成功</div>';
-                    }).catch(error => {
-                        console.error('getSummary 失败:', error);
-                        resultEl.innerHTML += '<div class="status error">❌ getSummary 方法调用失败</div>';
-                    });
-                    
-                } catch (error) {
-                    resultEl.innerHTML = '<div class="status error">❌ BlogStats 实例化失败: ' + error.message + '</div>';
-                    console.error('BlogStats 实例化失败:', error);
-                }
-            } else {
-                resultEl.innerHTML = '<div class="status error">❌ BlogStats 类未定义</div>';
-                console.error('BlogStats 类未定义');
-            }
+      }
+
+      async function testAPIDirectly() {
+        const resultEl = document.getElementById("visit-result");
+
+        try {
+          console.log("开始直接测试API...");
+          const response = await fetch("/api/stats?type=summary");
+          const result = await response.json();
+
+          console.log("API响应:", result);
+          document.getElementById("raw-response").textContent = JSON.stringify(
+            result,
+            null,
+            2
+          );
+
+          if (result.success) {
+            resultEl.innerHTML =
+              '<div class="status success">✅ API调用成功: 总访问量 ' +
+              result.data.total_pv +
+              ", 独立访客 " +
+              result.data.total_uv +
+              "</div>";
+          } else {
+            resultEl.innerHTML =
+              '<div class="status error">❌ API返回错误: ' +
+              result.error +
+              "</div>";
+          }
+        } catch (error) {
+          resultEl.innerHTML =
+            '<div class="status error">❌ API调用失败: ' +
+            error.message +
+            "</div>";
+          console.error("API调用失败:", error);
         }
-        
-        function testBusuanzi() {
-            const resultEl = document.getElementById('script-test-result');
-            
-            if (typeof window.busuanzi !== 'undefined') {
-                resultEl.innerHTML = '<div class="status success">✅ Busuanzi 兼容接口可用</div>';
-                console.log('Busuanzi 兼容测试成功');
-            } else {
-                resultEl.innerHTML = '<div class="status error">❌ Busuanzi 兼容接口未定义</div>';
-                console.error('Busuanzi 兼容接口未定义');
-            }
+      }
+
+      function initStats() {
+        try {
+          const apiUrl = document.getElementById("apiUrl").value;
+
+          if (typeof BlogStats === "undefined") {
+            alert("❌ BlogStats 类未加载，请检查客户端脚本是否正确加载");
+            console.error("BlogStats 类未加载");
+            return;
+          }
+
+          blogStats = new BlogStats(apiUrl);
+          alert("✅ 统计客户端已初始化: " + apiUrl);
+          console.log("BlogStats 初始化成功:", apiUrl);
+        } catch (error) {
+          alert("❌ 初始化失败: " + error.message);
+          console.error("初始化错误:", error);
         }
-        
-        async function testAPIDirectly() {
-            const resultEl = document.getElementById('visit-result');
-            
-            try {
-                console.log('开始直接测试API...');
-                const response = await fetch('/api/stats?type=summary');
-                const result = await response.json();
-                
-                console.log('API响应:', result);
-                document.getElementById('raw-response').textContent = JSON.stringify(result, null, 2);
-                
-                if (result.success) {
-                    resultEl.innerHTML = '<div class="status success">✅ API调用成功: 总访问量 ' + result.data.total_pv + ', 独立访客 ' + result.data.total_uv + '</div>';
-                } else {
-                    resultEl.innerHTML = '<div class="status error">❌ API返回错误: ' + result.error + '</div>';
-                }
-            } catch (error) {
-                resultEl.innerHTML = '<div class="status error">❌ API调用失败: ' + error.message + '</div>';
-                console.error('API调用失败:', error);
-            }
+      }
+
+      async function recordVisit() {
+        if (!blogStats) {
+          alert("请先初始化统计客户端");
+          return;
         }
-        
-        function initStats() {
-            try {
-                const apiUrl = document.getElementById('apiUrl').value;
-                
-                if (typeof BlogStats === 'undefined') {
-                    alert('❌ BlogStats 类未加载，请检查客户端脚本是否正确加载');
-                    console.error('BlogStats 类未加载');
-                    return;
-                }
-                
-                blogStats = new BlogStats(apiUrl);
-                alert('✅ 统计客户端已初始化: ' + apiUrl);
-                console.log('BlogStats 初始化成功:', apiUrl);
-                
-            } catch (error) {
-                alert('❌ 初始化失败: ' + error.message);
-                console.error('初始化错误:', error);
-            }
+
+        try {
+          await blogStats.recordVisit();
+          document.getElementById("visit-result").innerHTML =
+            '<p style="color: green;">✅ 访问记录成功</p>';
+        } catch (error) {
+          document.getElementById("visit-result").innerHTML =
+            '<p style="color: red;">❌ 访问记录失败: ' + error.message + "</p>";
         }
-        
-        async function recordVisit() {
-            if (!blogStats) {
-                alert('请先初始化统计客户端');
-                return;
-            }
-            
-            try {
-                await blogStats.recordVisit();
-                document.getElementById('visit-result').innerHTML = 
-                    '<p style="color: green;">✅ 访问记录成功</p>';
-            } catch (error) {
-                document.getElementById('visit-result').innerHTML = 
-                    '<p style="color: red;">❌ 访问记录失败: ' + error.message + '</p>';
-            }
+      }
+
+      async function recordCustomVisit() {
+        if (!blogStats) {
+          alert("请先初始化统计客户端");
+          return;
         }
-        
-        async function recordCustomVisit() {
-            if (!blogStats) {
-                alert('请先初始化统计客户端');
-                return;
-            }
-            
-            const path = prompt('请输入要记录的路径:', '/test/custom-path');
-            if (!path) return;
-            
-            try {
-                await blogStats.recordVisit(path);
-                document.getElementById('visit-result').innerHTML = 
-                    '<p style="color: green;">✅ 自定义路径访问记录成功: ' + path + '</p>';
-            } catch (error) {
-                document.getElementById('visit-result').innerHTML = 
-                    '<p style="color: red;">❌ 自定义路径访问记录失败: ' + error.message + '</p>';
-            }
+
+        const path = prompt("请输入要记录的路径:", "/test/custom-path");
+        if (!path) return;
+
+        try {
+          await blogStats.recordVisit(path);
+          document.getElementById("visit-result").innerHTML =
+            '<p style="color: green;">✅ 自定义路径访问记录成功: ' +
+            path +
+            "</p>";
+        } catch (error) {
+          document.getElementById("visit-result").innerHTML =
+            '<p style="color: red;">❌ 自定义路径访问记录失败: ' +
+            error.message +
+            "</p>";
         }
-        
-        async function getSummary() {
-            if (!blogStats) {
-                alert('请先初始化统计客户端');
-                return;
-            }
-            
-            try {
-                const data = await blogStats.getSummary();
-                document.getElementById('raw-response').textContent = JSON.stringify(data, null, 2);
-                
-                if (data) {
-                    document.getElementById('summary-content').innerHTML = `
+      }
+
+      async function getSummary() {
+        if (!blogStats) {
+          alert("请先初始化统计客户端");
+          return;
+        }
+
+        try {
+          const data = await blogStats.getSummary();
+          document.getElementById("raw-response").textContent = JSON.stringify(
+            data,
+            null,
+            2
+          );
+
+          if (data) {
+            document.getElementById("summary-content").innerHTML = `
                         <div class="stat-item">
                             <span class="stat-label">总访问量:</span>
-                            <span class="stat-value">${data.total_pv || 0}</span>
+                            <span class="stat-value">${
+                              data.total_pv || 0
+                            }</span>
                         </div>
                         <div class="stat-item">
                             <span class="stat-label">独立访客:</span>
-                            <span class="stat-value">${data.total_uv || 0}</span>
+                            <span class="stat-value">${
+                              data.total_uv || 0
+                            }</span>
                         </div>
                         <div class="stat-item">
                             <span class="stat-label">活跃天数:</span>
-                            <span class="stat-value">${data.active_days || 0}</span>
+                            <span class="stat-value">${
+                              data.active_days || 0
+                            }</span>
                         </div>
                     `;
-                    document.getElementById('stats-summary').style.display = 'block';
-                }
-            } catch (error) {
-                document.getElementById('raw-response').textContent = 'Error: ' + error.message;
-            }
+            document.getElementById("stats-summary").style.display = "block";
+          }
+        } catch (error) {
+          document.getElementById("raw-response").textContent =
+            "Error: " + error.message;
         }
-        
-        async function getDailyStats() {
-            if (!blogStats) {
-                alert('请先初始化统计客户端');
-                return;
-            }
-            
-            try {
-                const data = await blogStats.getDailyStats(7);
-                document.getElementById('raw-response').textContent = JSON.stringify(data, null, 2);
-                
-                if (data && data.length > 0) {
-                    let html = '<table border="1" style="width: 100%; border-collapse: collapse;">';
-                    html += '<tr><th>日期</th><th>访问量</th><th>独立访客</th></tr>';
-                    data.forEach(day => {
-                        html += `<tr><td>${day.date}</td><td>${day.daily_pv}</td><td>${day.daily_uv}</td></tr>`;
-                    });
-                    html += '</table>';
-                    document.getElementById('daily-content').innerHTML = html;
-                    document.getElementById('stats-daily').style.display = 'block';
-                }
-            } catch (error) {
-                document.getElementById('raw-response').textContent = 'Error: ' + error.message;
-            }
-        }
-        
-        async function getPageStats() {
-            if (!blogStats) {
-                alert('请先初始化统计客户端');
-                return;
-            }
-            
-            try {
-                const data = await blogStats.getPageStats();
-                document.getElementById('raw-response').textContent = JSON.stringify(data, null, 2);
-                
-                if (data && data.length > 0) {
-                    let html = '<table border="1" style="width: 100%; border-collapse: collapse;">';
-                    html += '<tr><th>页面路径</th><th>访问量</th><th>独立访客</th></tr>';
-                    data.slice(0, 10).forEach(page => {
-                        html += `<tr><td>${page.path}</td><td>${page.page_pv}</td><td>${page.page_uv}</td></tr>`;
-                    });
-                    html += '</table>';
-                    document.getElementById('page-content').innerHTML = html;
-                    document.getElementById('stats-page').style.display = 'block';
-                }
-            } catch (error) {
-                document.getElementById('raw-response').textContent = 'Error: ' + error.message;
-            }
-        }
-        
-        async function getRecentVisits() {
-            if (!blogStats) {
-                alert('请先初始化统计客户端');
-                return;
-            }
-            
-            try {
-                const data = await blogStats.getRecentVisits(7);
-                document.getElementById('raw-response').textContent = JSON.stringify(data, null, 2);
-                
-                if (data && data.length > 0) {
-                    let html = '<table border="1" style="width: 100%; border-collapse: collapse;">';
-                    html += '<tr><th>页面路径</th><th>国家</th><th>访问时间</th></tr>';
-                    data.slice(0, 20).forEach(visit => {
-                        const date = new Date(visit.created_at).toLocaleString('zh-CN');
-                        html += `<tr><td>${visit.path}</td><td>${visit.country}</td><td>${date}</td></tr>`;
-                    });
-                    html += '</table>';
-                    document.getElementById('recent-content').innerHTML = html;
-                    document.getElementById('stats-recent').style.display = 'block';
-                }
-            } catch (error) {
-                document.getElementById('raw-response').textContent = 'Error: ' + error.message;
-            }
-        }
-        
+      }
 
+      async function getDailyStats() {
+        if (!blogStats) {
+          alert("请先初始化统计客户端");
+          return;
+        }
+
+        try {
+          const data = await blogStats.getDailyStats(7);
+          document.getElementById("raw-response").textContent = JSON.stringify(
+            data,
+            null,
+            2
+          );
+
+          if (data && data.length > 0) {
+            let html =
+              '<table border="1" style="width: 100%; border-collapse: collapse;">';
+            html += "<tr><th>日期</th><th>访问量</th><th>独立访客</th></tr>";
+            data.forEach((day) => {
+              html += `<tr><td>${day.date}</td><td>${day.daily_pv}</td><td>${day.daily_uv}</td></tr>`;
+            });
+            html += "</table>";
+            document.getElementById("daily-content").innerHTML = html;
+            document.getElementById("stats-daily").style.display = "block";
+          }
+        } catch (error) {
+          document.getElementById("raw-response").textContent =
+            "Error: " + error.message;
+        }
+      }
+
+      async function getPageStats() {
+        if (!blogStats) {
+          alert("请先初始化统计客户端");
+          return;
+        }
+
+        try {
+          const data = await blogStats.getPageStats();
+          document.getElementById("raw-response").textContent = JSON.stringify(
+            data,
+            null,
+            2
+          );
+
+          if (data && data.length > 0) {
+            let html =
+              '<table border="1" style="width: 100%; border-collapse: collapse;">';
+            html +=
+              "<tr><th>页面路径</th><th>访问量</th><th>独立访客</th></tr>";
+            data.slice(0, 10).forEach((page) => {
+              html += `<tr><td>${page.path}</td><td>${page.page_pv}</td><td>${page.page_uv}</td></tr>`;
+            });
+            html += "</table>";
+            document.getElementById("page-content").innerHTML = html;
+            document.getElementById("stats-page").style.display = "block";
+          }
+        } catch (error) {
+          document.getElementById("raw-response").textContent =
+            "Error: " + error.message;
+        }
+      }
+
+      async function getRecentVisits() {
+        if (!blogStats) {
+          alert("请先初始化统计客户端");
+          return;
+        }
+
+        try {
+          const data = await blogStats.getRecentVisits(7);
+          document.getElementById("raw-response").textContent = JSON.stringify(
+            data,
+            null,
+            2
+          );
+
+          if (data && data.length > 0) {
+            let html =
+              '<table border="1" style="width: 100%; border-collapse: collapse;">';
+            html += "<tr><th>页面路径</th><th>国家</th><th>访问时间</th></tr>";
+            data.slice(0, 20).forEach((visit) => {
+              const date = new Date(visit.created_at).toLocaleString("zh-CN");
+              html += `<tr><td>${visit.path}</td><td>${visit.country}</td><td>${date}</td></tr>`;
+            });
+            html += "</table>";
+            document.getElementById("recent-content").innerHTML = html;
+            document.getElementById("stats-recent").style.display = "block";
+          }
+        } catch (error) {
+          document.getElementById("raw-response").textContent =
+            "Error: " + error.message;
+        }
+      }
     </script>
-    
+
     <!-- 内联博客统计脚本 -->
     <script>
-        /**
-         * 博客统计客户端 - Busuanzi 兼容版本
-         * 替代原版不蒜子统计，使用自定义API
-         */
-        
-        (function() {
-          'use strict';
-          
-          const API_BASE = 'https://stats.lpblog.dpdns.org';
-          let visitRecorded = false;
-          let statsLoaded = false;
-          
-          console.log('📊 博客统计脚本开始加载...');
-          
-          // 记录访问
-          async function recordVisit() {
-            if (visitRecorded) return;
-            
-            try {
-              const response = await fetch(`${API_BASE}/api/visit`, {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                  path: window.location.pathname,
-                  referrer: document.referrer
-                })
-              });
-              
-              if (response.ok) {
-                visitRecorded = true;
-                console.log('✅ 访问记录成功');
-              } else {
-                console.error('❌ 访问记录失败:', response.status);
-              }
-            } catch (error) {
-              console.error('❌ 访问记录异常:', error);
-            }
-          }
-          
-          // 获取统计数据
-          async function fetchStats() {
-            try {
-              console.log('🔍 开始获取统计数据...');
-              
-              // 获取总体统计
-              const summaryResponse = await fetch(`${API_BASE}/api/stats?type=summary`);
-              const summaryResult = await summaryResponse.json();
-              
-              console.log('📊 总体统计:', summaryResult);
-              
-              if (summaryResult.success && summaryResult.data) {
-                console.log(`📈 站点统计 - PV: ${summaryResult.data.total_pv}, UV: ${summaryResult.data.total_uv}`);
-              }
-              
-            } catch (error) {
-              console.error('❌ 获取统计数据失败:', error);
-            }
-          }
-          
-          // 初始化函数
-          function init() {
-            console.log('🚀 博客统计初始化开始...');
-            
-            // 记录访问
-            recordVisit();
-            
-            // 延迟获取统计数据
-            setTimeout(() => {
-              fetchStats();
-            }, 1500);
-            
-            statsLoaded = true;
-            console.log('✅ 博客统计初始化完成');
-          }
-          
-          // 等待页面加载完成
-          function waitForLoad() {
-            if (document.readyState === 'loading') {
-              document.addEventListener('DOMContentLoaded', init);
+      /**
+       * 博客统计客户端 - Busuanzi 兼容版本
+       * 替代原版不蒜子统计，使用自定义API
+       */
+
+      (function () {
+        "use strict";
+
+        const API_BASE = "https://stats.lpblog.dpdns.org";
+        let visitRecorded = false;
+        let statsLoaded = false;
+
+        console.log("📊 博客统计脚本开始加载...");
+
+        // 记录访问
+        async function recordVisit() {
+          if (visitRecorded) return;
+
+          try {
+            const response = await fetch(`${API_BASE}/api/visit`, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                path: window.location.pathname,
+                referrer: document.referrer,
+              }),
+            });
+
+            if (response.ok) {
+              visitRecorded = true;
+              console.log("✅ 访问记录成功");
             } else {
-              setTimeout(init, 500);
+              console.error("❌ 访问记录失败:", response.status);
             }
+          } catch (error) {
+            console.error("❌ 访问记录异常:", error);
           }
-          
-          // 为测试页面提供BlogStats类
-          window.BlogStats = function(apiUrl) {
-            this.apiBaseUrl = apiUrl || API_BASE;
-            this.recordVisit = recordVisit;
-            this.getSummary = async () => {
-              const response = await fetch(`${this.apiBaseUrl}/api/stats?type=summary`);
-              const result = await response.json();
-              return result.success ? result.data : null;
-            };
-            console.log('📦 BlogStats 类已创建');
+        }
+
+        // 获取统计数据
+        async function fetchStats() {
+          try {
+            console.log("🔍 开始获取统计数据...");
+
+            // 获取总体统计
+            const summaryResponse = await fetch(
+              `${API_BASE}/api/stats?type=summary`
+            );
+            const summaryResult = await summaryResponse.json();
+
+            console.log("📊 总体统计:", summaryResult);
+
+            if (summaryResult.success && summaryResult.data) {
+              console.log(
+                `📈 站点统计 - PV: ${summaryResult.data.total_pv}, UV: ${summaryResult.data.total_uv}`
+              );
+            }
+          } catch (error) {
+            console.error("❌ 获取统计数据失败:", error);
+          }
+        }
+
+        // 初始化函数
+        function init() {
+          console.log("🚀 博客统计初始化开始...");
+
+          // 记录访问
+          recordVisit();
+
+          // 延迟获取统计数据
+          setTimeout(() => {
+            fetchStats();
+          }, 1500);
+
+          statsLoaded = true;
+          console.log("✅ 博客统计初始化完成");
+        }
+
+        // 等待页面加载完成
+        function waitForLoad() {
+          if (document.readyState === "loading") {
+            document.addEventListener("DOMContentLoaded", init);
+          } else {
+            setTimeout(init, 500);
+          }
+        }
+
+        // 为测试页面提供BlogStats类
+        window.BlogStats = function (apiUrl) {
+          this.apiBaseUrl = apiUrl || API_BASE;
+          this.recordVisit = recordVisit;
+
+          // 获取总体统计
+          this.getSummary = async () => {
+            const response = await fetch(
+              `${this.apiBaseUrl}/api/stats?type=summary`
+            );
+            const result = await response.json();
+            return result.success ? result.data : null;
           };
-          
-          // 兼容原版busuanzi
-          window.busuanzi = {
-            fetch: fetchStats,
-            record: recordVisit,
-            loaded: () => statsLoaded
+
+          // 获取每日统计
+          this.getDailyStats = async (days = 30) => {
+            const response = await fetch(
+              `${this.apiBaseUrl}/api/stats?type=daily&days=${days}`
+            );
+            const result = await response.json();
+            return result.success ? result.data : null;
           };
-          
-          // 启动初始化
-          waitForLoad();
-          
-          console.log('📊 博客统计脚本已加载完成');
-          
-        })();
+
+          // 获取页面统计
+          this.getPageStats = async (path = null) => {
+            let url = `${this.apiBaseUrl}/api/stats?type=page`;
+            if (path) {
+              url += `&path=${encodeURIComponent(path)}`;
+            }
+            const response = await fetch(url);
+            const result = await response.json();
+            return result.success ? result.data : null;
+          };
+
+          // 获取最近访问
+          this.getRecentVisits = async (days = 7) => {
+            const response = await fetch(
+              `${this.apiBaseUrl}/api/stats?type=recent&days=${days}`
+            );
+            const result = await response.json();
+            return result.success ? result.data : null;
+          };
+
+          console.log("📦 BlogStats 类已创建（包含所有方法）");
+        };
+
+        // 兼容原版busuanzi
+        window.busuanzi = {
+          fetch: fetchStats,
+          record: recordVisit,
+          loaded: () => statsLoaded,
+        };
+
+        // 启动初始化
+        waitForLoad();
+
+        console.log("📊 博客统计脚本已加载完成");
+      })();
     </script>
-    
+
     <script>
-        // 页面加载完成后自动检查状态
-        window.addEventListener('load', function() {
-            // 自动设置当前域名作为 API URL
-            const currentDomain = window.location.origin;
-            document.getElementById('apiUrl').value = currentDomain;
-            
-            // 延迟检查脚本状态
-            setTimeout(() => {
-                checkScriptStatus();
-            }, 2000);
-        });
+      // 页面加载完成后自动检查状态
+      window.addEventListener("load", function () {
+        // 自动设置当前域名作为 API URL
+        const currentDomain = window.location.origin;
+        document.getElementById("apiUrl").value = currentDomain;
+
+        // 延迟检查脚本状态
+        setTimeout(() => {
+          checkScriptStatus();
+        }, 2000);
+      });
     </script>
-</body>
+  </body>
 </html>
