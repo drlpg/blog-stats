@@ -58,8 +58,14 @@ export function validatePath(path) {
     return false;
   }
   
-  // 基本的路径格式验证
-  return /^\/[a-zA-Z0-9\-_\/]*$/.test(path);
+  // 必须以/开头
+  if (!path.startsWith('/')) {
+    return false;
+  }
+  
+  // 简化验证：只检查基本安全性，允许大部分URL字符
+  // 禁止危险字符如 <, >, ", ', \, null字符等
+  return !/[<>"'\\\\x00-\\x1f\\x7f]/.test(path);
 }
 
 /**

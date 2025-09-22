@@ -126,7 +126,7 @@ success "Stats API 提交完成 🚀 (耗时 ${DURATION} 秒)"
 # 显示部署信息
 echo ""
 echo -e "${CYAN}📡 部署信息:${NC}"
-echo "  • Vercel 会自动检测到更新并重新部署"
+echo "  • Vercel 自动检测更新并重新部署"
 echo "  • API 地址: https://stats.lpblog.dpdns.org"
 echo "  • 测试页面: https://stats.lpblog.dpdns.org/test.html"
 echo ""
