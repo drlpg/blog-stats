@@ -5,13 +5,10 @@
 
 class BlogStats {
   constructor(apiBaseUrl) {
-    this.apiBaseUrl = apiBaseUrl.replace(/\/$/, ''); // 移除末尾斜杠
-    this.visited = new Set(); // 防止重复记录
+    this.apiBaseUrl = apiBaseUrl.replace(/\/$/, '');
+    this.visited = new Set();
   }
 
-  /**
-   * 记录页面访问
-   */
   async recordVisit(path = null, referrer = null) {
     try {
       // 使用当前路径或提供的路径
@@ -42,9 +39,6 @@ class BlogStats {
     }
   }
 
-  /**
-   * 获取统计数据
-   */
   async getStats(type = 'summary', options = {}) {
     try {
       const params = new URLSearchParams();
@@ -163,11 +157,7 @@ class BlogStats {
     }
   }
 
-  /**
-   * 自动初始化（记录当前页面访问）
-   */
   init() {
-    // 页面加载完成后记录访问
     if (document.readyState === 'loading') {
       document.addEventListener('DOMContentLoaded', () => {
         this.recordVisit();
@@ -178,12 +168,6 @@ class BlogStats {
   }
 }
 
-// 使用示例：
-// const blogStats = new BlogStats('https://your-vercel-app.vercel.app');
-// blogStats.init(); // 自动记录访问
-// blogStats.displayStats('stats-container', 'summary'); // 显示统计
-
-// 如果在浏览器环境中，将 BlogStats 添加到全局对象
 if (typeof window !== 'undefined') {
   window.BlogStats = BlogStats;
 }
