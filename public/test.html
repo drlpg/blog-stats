@@ -18,6 +18,14 @@
             border-radius: 8px;
             margin: 20px 0;
         }
+        .status {
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 5px;
+        }
+        .success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .info { background: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
         button {
             background: #007cba;
             color: white;
@@ -55,16 +63,32 @@
             padding: 15px;
             border-radius: 4px;
             overflow-x: auto;
+            max-height: 300px;
+            overflow-y: auto;
+            font-size: 12px;
         }
     </style>
 </head>
 <body>
     <h1>博客统计 API 测试页面</h1>
     
+    <div id="script-status" class="status info">
+        🔄 正在检查脚本加载状态...
+    </div>
+    
     <div class="container">
-        <h2>配置</h2>
+        <h2>脚本状态检查</h2>
+        <button onclick="checkScriptStatus()">检查脚本状态</button>
+        <button onclick="testBlogStats()">测试BlogStats类</button>
+        <button onclick="testBusuanzi()">测试Busuanzi兼容</button>
+        <button onclick="clearLog()">清空日志</button>
+        <div id="script-test-result"></div>
+    </div>
+    
+    <div class="container">
+        <h2>API配置</h2>
         <label for="apiUrl">API 基础 URL:</label>
-        <input type="text" id="apiUrl" value="https://your-vercel-app.vercel.app" style="width: 300px; padding: 5px;">
+        <input type="text" id="apiUrl" value="https://stats.lpblog.dpdns.org" style="width: 300px; padding: 5px;">
         <button onclick="initStats()">初始化</button>
     </div>
     
@@ -72,6 +96,7 @@
         <h2>访问记录测试</h2>
         <button onclick="recordVisit()">记录当前页面访问</button>
         <button onclick="recordCustomVisit()">记录自定义路径访问</button>
+        <button onclick="testAPIDirectly()">直接测试API</button>
         <div id="visit-result"></div>
     </div>
     
@@ -104,6 +129,11 @@
     </div>
     
     <div class="container">
+        <h2>实时日志</h2>
+        <pre id="console-log"></pre>
+    </div>
+    
+    <div class="container">
         <h2>原始 API 响应</h2>
         <pre id="raw-response"></pre>
     </div>
@@ -111,19 +141,129 @@
     <script>
         let blogStats = null;
         
+        // 日志系统
+        const logElement = document.getElementById('console-log');
+        
+        function addLog(type, message) {
+            const timestamp = new Date().toLocaleTimeString();
+            logElement.textContent += `[${timestamp}] ${type}: ${message}\n`;
+            logElement.scrollTop = logElement.scrollHeight;
+        }
+        
+        const originalLog = console.log;
+        const originalError = console.error;
+        
+        console.log = function(...args) {
+            originalLog.apply(console, args);
+            addLog('LOG', args.join(' '));
+        };
+        
+        console.error = function(...args) {
+            originalError.apply(console, args);
+            addLog('ERROR', args.join(' '));
+        };
+        
+        function clearLog() {
+            logElement.textContent = '';
+        }
+        
+        // 脚本状态检查函数
+        function checkScriptStatus() {
+            const statusEl = document.getElementById('script-status');
+            const resultEl = document.getElementById('script-test-result');
+            
+            if (typeof BlogStats !== 'undefined') {
+                statusEl.className = 'status success';
+                statusEl.innerHTML = '✅ BlogStats 类已成功加载';
+                resultEl.innerHTML = '<div class="status success">✅ BlogStats 类可用</div>';
+                console.log('BlogStats 类检查通过');
+            } else if (typeof window.busuanzi !== 'undefined') {
+                statusEl.className = 'status success';
+                statusEl.innerHTML = '✅ Busuanzi 兼容接口已加载';
+                resultEl.innerHTML = '<div class="status success">✅ Busuanzi 兼容接口可用</div>';
+                console.log('Busuanzi 兼容接口检查通过');
+            } else {
+                statusEl.className = 'status error';
+                statusEl.innerHTML = '❌ 脚本未正确加载';
+                resultEl.innerHTML = '<div class="status error">❌ 脚本未正确加载，请检查网络连接和文件路径</div>';
+                console.error('脚本加载失败');
+            }
+        }
+        
+        function testBlogStats() {
+            const resultEl = document.getElementById('script-test-result');
+            
+            if (typeof BlogStats !== 'undefined') {
+                try {
+                    const stats = new BlogStats();
+                    resultEl.innerHTML = '<div class="status success">✅ BlogStats 类实例化成功</div>';
+                    console.log('BlogStats 测试成功');
+                    
+                    // 测试getSummary方法
+                    stats.getSummary().then(data => {
+                        console.log('getSummary 结果:', data);
+                        resultEl.innerHTML += '<div class="status success">✅ getSummary 方法调用成功</div>';
+                    }).catch(error => {
+                        console.error('getSummary 失败:', error);
+                        resultEl.innerHTML += '<div class="status error">❌ getSummary 方法调用失败</div>';
+                    });
+                    
+                } catch (error) {
+                    resultEl.innerHTML = '<div class="status error">❌ BlogStats 实例化失败: ' + error.message + '</div>';
+                    console.error('BlogStats 实例化失败:', error);
+                }
+            } else {
+                resultEl.innerHTML = '<div class="status error">❌ BlogStats 类未定义</div>';
+                console.error('BlogStats 类未定义');
+            }
+        }
+        
+        function testBusuanzi() {
+            const resultEl = document.getElementById('script-test-result');
+            
+            if (typeof window.busuanzi !== 'undefined') {
+                resultEl.innerHTML = '<div class="status success">✅ Busuanzi 兼容接口可用</div>';
+                console.log('Busuanzi 兼容测试成功');
+            } else {
+                resultEl.innerHTML = '<div class="status error">❌ Busuanzi 兼容接口未定义</div>';
+                console.error('Busuanzi 兼容接口未定义');
+            }
+        }
+        
+        async function testAPIDirectly() {
+            const resultEl = document.getElementById('visit-result');
+            
+            try {
+                console.log('开始直接测试API...');
+                const response = await fetch('/api/stats?type=summary');
+                const result = await response.json();
+                
+                console.log('API响应:', result);
+                document.getElementById('raw-response').textContent = JSON.stringify(result, null, 2);
+                
+                if (result.success) {
+                    resultEl.innerHTML = '<div class="status success">✅ API调用成功: 总访问量 ' + result.data.total_pv + ', 独立访客 ' + result.data.total_uv + '</div>';
+                } else {
+                    resultEl.innerHTML = '<div class="status error">❌ API返回错误: ' + result.error + '</div>';
+                }
+            } catch (error) {
+                resultEl.innerHTML = '<div class="status error">❌ API调用失败: ' + error.message + '</div>';
+                console.error('API调用失败:', error);
+            }
+        }
+        
         function initStats() {
             try {
                 const apiUrl = document.getElementById('apiUrl').value;
                 
                 if (typeof BlogStats === 'undefined') {
                     alert('❌ BlogStats 类未加载，请检查客户端脚本是否正确加载');
+                    console.error('BlogStats 类未加载');
                     return;
                 }
                 
                 blogStats = new BlogStats(apiUrl);
                 alert('✅ 统计客户端已初始化: ' + apiUrl);
-                
-                // 显示调试信息
                 console.log('BlogStats 初始化成功:', apiUrl);
                 
             } catch (error) {
@@ -278,22 +418,132 @@
 
     </script>
     
-    <!-- 直接加载 BlogStats 客户端 -->
-    <script src="/client/blog-stats.js"></script>
+    <!-- 内联博客统计脚本 -->
+    <script>
+        /**
+         * 博客统计客户端 - Busuanzi 兼容版本
+         * 替代原版不蒜子统计，使用自定义API
+         */
+        
+        (function() {
+          'use strict';
+          
+          const API_BASE = 'https://stats.lpblog.dpdns.org';
+          let visitRecorded = false;
+          let statsLoaded = false;
+          
+          console.log('📊 博客统计脚本开始加载...');
+          
+          // 记录访问
+          async function recordVisit() {
+            if (visitRecorded) return;
+            
+            try {
+              const response = await fetch(`${API_BASE}/api/visit`, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                  path: window.location.pathname,
+                  referrer: document.referrer
+                })
+              });
+              
+              if (response.ok) {
+                visitRecorded = true;
+                console.log('✅ 访问记录成功');
+              } else {
+                console.error('❌ 访问记录失败:', response.status);
+              }
+            } catch (error) {
+              console.error('❌ 访问记录异常:', error);
+            }
+          }
+          
+          // 获取统计数据
+          async function fetchStats() {
+            try {
+              console.log('🔍 开始获取统计数据...');
+              
+              // 获取总体统计
+              const summaryResponse = await fetch(`${API_BASE}/api/stats?type=summary`);
+              const summaryResult = await summaryResponse.json();
+              
+              console.log('📊 总体统计:', summaryResult);
+              
+              if (summaryResult.success && summaryResult.data) {
+                console.log(`📈 站点统计 - PV: ${summaryResult.data.total_pv}, UV: ${summaryResult.data.total_uv}`);
+              }
+              
+            } catch (error) {
+              console.error('❌ 获取统计数据失败:', error);
+            }
+          }
+          
+          // 初始化函数
+          function init() {
+            console.log('🚀 博客统计初始化开始...');
+            
+            // 记录访问
+            recordVisit();
+            
+            // 延迟获取统计数据
+            setTimeout(() => {
+              fetchStats();
+            }, 1500);
+            
+            statsLoaded = true;
+            console.log('✅ 博客统计初始化完成');
+          }
+          
+          // 等待页面加载完成
+          function waitForLoad() {
+            if (document.readyState === 'loading') {
+              document.addEventListener('DOMContentLoaded', init);
+            } else {
+              setTimeout(init, 500);
+            }
+          }
+          
+          // 为测试页面提供BlogStats类
+          window.BlogStats = function(apiUrl) {
+            this.apiBaseUrl = apiUrl || API_BASE;
+            this.recordVisit = recordVisit;
+            this.getSummary = async () => {
+              const response = await fetch(`${this.apiBaseUrl}/api/stats?type=summary`);
+              const result = await response.json();
+              return result.success ? result.data : null;
+            };
+            console.log('📦 BlogStats 类已创建');
+          };
+          
+          // 兼容原版busuanzi
+          window.busuanzi = {
+            fetch: fetchStats,
+            record: recordVisit,
+            loaded: () => statsLoaded
+          };
+          
+          // 启动初始化
+          waitForLoad();
+          
+          console.log('📊 博客统计脚本已加载完成');
+          
+        })();
+    </script>
     
     <script>
-        // 页面加载完成后设置正确的 API URL
+        // 页面加载完成后自动检查状态
         window.addEventListener('load', function() {
             // 自动设置当前域名作为 API URL
             const currentDomain = window.location.origin;
             document.getElementById('apiUrl').value = currentDomain;
             
-            // 如果 BlogStats 类可用，自动初始化
-            if (typeof BlogStats !== 'undefined') {
-                initStats();
-            } else {
-                console.log('BlogStats 类未加载，请手动初始化');
-            }
+            // 延迟检查脚本状态
+            setTimeout(() => {
+                checkScriptStatus();
+            }, 2000);
         });
     </script>
 </body>
