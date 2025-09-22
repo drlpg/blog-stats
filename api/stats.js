@@ -43,17 +43,35 @@ export default async function handler(req, res) {
 
 // 获取总体统计
 async function getSummaryStats(res) {
-  const { data, error } = await supabase
-    .from('stats_summary')
-    .select('*')
-    .single();
-  
-  if (error) {
+  try {
+    // 直接查询基础表，避免视图权限问题
+    const { data: visits, error } = await supabase
+      .from('visits')
+      .select('id, ip_hash, created_at');
+    
+    if (error) {
+      console.error('Summary stats error:', error);
+      return errorResponse(res, 'Failed to fetch summary stats', 500);
+    }
+    
+    // 手动计算统计数据
+    const totalPv = visits.length;
+    const uniqueIps = new Set(visits.map(v => v.ip_hash));
+    const totalUv = uniqueIps.size;
+    const uniqueDates = new Set(visits.map(v => v.created_at.split('T')[0]));
+    const activeDays = uniqueDates.size;
+    
+    const stats = {
+      total_pv: totalPv,
+      total_uv: totalUv,
+      active_days: activeDays
+    };
+    
+    return successResponse(res, stats);
+  } catch (error) {
     console.error('Summary stats error:', error);
     return errorResponse(res, 'Failed to fetch summary stats', 500);
   }
-  
-  return successResponse(res, data);
 }
 
 // 获取每日统计
