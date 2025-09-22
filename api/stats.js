@@ -91,22 +91,64 @@ async function getDailyStats(res, days) {
 
 // 获取页面统计
 async function getPageStats(res, specificPath) {
-  let query = supabase.from('page_stats').select('*');
-  
-  if (specificPath) {
-    query = query.eq('path', specificPath);
-  } else {
-    query = query.limit(50); // 限制返回前50个页面
-  }
-  
-  const { data, error } = await query;
-  
-  if (error) {
+  try {
+    if (specificPath) {
+      // 查询特定页面的统计
+      const { data: visits, error } = await supabase
+        .from('visits')
+        .select('id, ip_hash')
+        .eq('path', specificPath);
+      
+      if (error) {
+        console.error('Page stats error:', error);
+        return errorResponse(res, 'Failed to fetch page stats', 500);
+      }
+      
+      const pageStats = {
+        path: specificPath,
+        page_pv: visits.length,
+        page_uv: new Set(visits.map(v => v.ip_hash)).size
+      };
+      
+      return successResponse(res, pageStats);
+    } else {
+      // 查询所有页面的统计
+      const { data: visits, error } = await supabase
+        .from('visits')
+        .select('path, ip_hash');
+      
+      if (error) {
+        console.error('Page stats error:', error);
+        return errorResponse(res, 'Failed to fetch page stats', 500);
+      }
+      
+      // 按页面分组统计
+      const pageStatsMap = {};
+      visits.forEach(visit => {
+        if (!pageStatsMap[visit.path]) {
+          pageStatsMap[visit.path] = {
+            path: visit.path,
+            page_pv: 0,
+            unique_ips: new Set()
+          };
+        }
+        pageStatsMap[visit.path].page_pv++;
+        pageStatsMap[visit.path].unique_ips.add(visit.ip_hash);
+      });
+      
+      // 转换为数组并计算 UV
+      const pageStats = Object.values(pageStatsMap).map(stats => ({
+        path: stats.path,
+        page_pv: stats.page_pv,
+        page_uv: stats.unique_ips.size
+      })).sort((a, b) => b.page_pv - a.page_pv).slice(0, 50);
+      
+      return successResponse(res, pageStats);
+    }
+  } catch (error) {
     console.error('Page stats error:', error);
     return errorResponse(res, 'Failed to fetch page stats', 500);
   }
-  
-  return successResponse(res, specificPath ? data[0] : data);
 }
 
 // 获取最近访问记录
