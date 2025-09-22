@@ -1,13 +1,15 @@
 /**
- * Busuanzi 兼容脚本
+ * 博客统计客户端 - Busuanzi 兼容版本
  * 替代原版不蒜子统计，使用自定义API
  */
 
+// 立即执行函数，避免全局变量污染
 (function() {
   'use strict';
   
   const API_BASE = 'https://stats.lpblog.dpdns.org';
   let visitRecorded = false;
+  let statsLoaded = false;
   
   // 记录访问
   async function recordVisit() {
@@ -124,28 +126,53 @@
     });
   }
   
-  // 初始化
+  // 初始化函数
   function init() {
+    console.log('🚀 博客统计初始化开始...');
+    
     // 记录访问
     recordVisit();
     
     // 延迟获取统计数据，确保页面元素已加载
     setTimeout(() => {
       fetchStats();
-    }, 1000);
+    }, 1500);
+    
+    statsLoaded = true;
+    console.log('✅ 博客统计初始化完成');
   }
   
-  // 页面加载完成后初始化
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', init);
-  } else {
-    init();
+  // 等待页面加载完成
+  function waitForLoad() {
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', init);
+    } else {
+      // 页面已加载，延迟一点时间确保所有元素都渲染完成
+      setTimeout(init, 500);
+    }
   }
   
-  // 兼容原版busuanzi的全局变量
+  // 兼容原版busuanzi的全局变量和方法
   window.busuanzi = {
     fetch: fetchStats,
-    record: recordVisit
+    record: recordVisit,
+    loaded: () => statsLoaded
   };
+  
+  // 为测试页面提供BlogStats类
+  window.BlogStats = function(apiUrl) {
+    this.apiBaseUrl = apiUrl || API_BASE;
+    this.recordVisit = recordVisit;
+    this.getSummary = async () => {
+      const response = await fetch(`${this.apiBaseUrl}/api/stats?type=summary`);
+      const result = await response.json();
+      return result.success ? result.data : null;
+    };
+  };
+  
+  // 启动初始化
+  waitForLoad();
+  
+  console.log('📊 博客统计脚本已加载');
   
 })();
