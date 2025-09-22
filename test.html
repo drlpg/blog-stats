@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>博客统计 API 测试</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        .container {
+            background: #f5f5f5;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        button {
+            background: #007cba;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #005a87;
+        }
+        .stats-display {
+            background: white;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 10px 0;
+            border-left: 4px solid #007cba;
+        }
+        .stat-item {
+            display: inline-block;
+            margin: 10px 20px 10px 0;
+        }
+        .stat-label {
+            font-weight: bold;
+            color: #666;
+        }
+        .stat-value {
+            color: #007cba;
+            font-size: 1.2em;
+            margin-left: 10px;
+        }
+        pre {
+            background: #f8f8f8;
+            padding: 15px;
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>博客统计 API 测试页面</h1>
+    
+    <div class="container">
+        <h2>配置</h2>
+        <label for="apiUrl">API 基础 URL:</label>
+        <input type="text" id="apiUrl" value="https://your-vercel-app.vercel.app" style="width: 300px; padding: 5px;">
+        <button onclick="initStats()">初始化</button>
+    </div>
+    
+    <div class="container">
+        <h2>访问记录测试</h2>
+        <button onclick="recordVisit()">记录当前页面访问</button>
+        <button onclick="recordCustomVisit()">记录自定义路径访问</button>
+        <div id="visit-result"></div>
+    </div>
+    
+    <div class="container">
+        <h2>统计查询测试</h2>
+        <button onclick="getSummary()">获取总体统计</button>
+        <button onclick="getDailyStats()">获取每日统计</button>
+        <button onclick="getPageStats()">获取页面统计</button>
+        <button onclick="getRecentVisits()">获取最近访问</button>
+        
+        <div id="stats-summary" class="stats-display" style="display: none;">
+            <h3>总体统计</h3>
+            <div id="summary-content"></div>
+        </div>
+        
+        <div id="stats-daily" class="stats-display" style="display: none;">
+            <h3>每日统计</h3>
+            <div id="daily-content"></div>
+        </div>
+        
+        <div id="stats-page" class="stats-display" style="display: none;">
+            <h3>页面统计</h3>
+            <div id="page-content"></div>
+        </div>
+        
+        <div id="stats-recent" class="stats-display" style="display: none;">
+            <h3>最近访问</h3>
+            <div id="recent-content"></div>
+        </div>
+    </div>
+    
+    <div class="container">
+        <h2>原始 API 响应</h2>
+        <pre id="raw-response"></pre>
+    </div>
+
+    <script>
+        let blogStats = null;
+        
+        function initStats() {
+            const apiUrl = document.getElementById('apiUrl').value;
+            blogStats = new BlogStats(apiUrl);
+            alert('统计客户端已初始化: ' + apiUrl);
+        }
+        
+        async function recordVisit() {
+            if (!blogStats) {
+                alert('请先初始化统计客户端');
+                return;
+            }
+            
+            try {
+                await blogStats.recordVisit();
+                document.getElementById('visit-result').innerHTML = 
+                    '<p style="color: green;">✅ 访问记录成功</p>';
+            } catch (error) {
+                document.getElementById('visit-result').innerHTML = 
+                    '<p style="color: red;">❌ 访问记录失败: ' + error.message + '</p>';
+            }
+        }
+        
+        async function recordCustomVisit() {
+            if (!blogStats) {
+                alert('请先初始化统计客户端');
+                return;
+            }
+            
+            const path = prompt('请输入要记录的路径:', '/test/custom-path');
+            if (!path) return;
+            
+            try {
+                await blogStats.recordVisit(path);
+                document.getElementById('visit-result').innerHTML = 
+                    '<p style="color: green;">✅ 自定义路径访问记录成功: ' + path + '</p>';
+            } catch (error) {
+                document.getElementById('visit-result').innerHTML = 
+                    '<p style="color: red;">❌ 自定义路径访问记录失败: ' + error.message + '</p>';
+            }
+        }
+        
+        async function getSummary() {
+            if (!blogStats) {
+                alert('请先初始化统计客户端');
+                return;
+            }
+            
+            try {
+                const data = await blogStats.getSummary();
+                document.getElementById('raw-response').textContent = JSON.stringify(data, null, 2);
+                
+                if (data) {
+                    document.getElementById('summary-content').innerHTML = `
+                        <div class="stat-item">
+                            <span class="stat-label">总访问量:</span>
+                            <span class="stat-value">${data.total_pv || 0}</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">独立访客:</span>
+                            <span class="stat-value">${data.total_uv || 0}</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">活跃天数:</span>
+                            <span class="stat-value">${data.active_days || 0}</span>
+                        </div>
+                    `;
+                    document.getElementById('stats-summary').style.display = 'block';
+                }
+            } catch (error) {
+                document.getElementById('raw-response').textContent = 'Error: ' + error.message;
+            }
+        }
+        
+        async function getDailyStats() {
+            if (!blogStats) {
+                alert('请先初始化统计客户端');
+                return;
+            }
+            
+            try {
+                const data = await blogStats.getDailyStats(7);
+                document.getElementById('raw-response').textContent = JSON.stringify(data, null, 2);
+                
+                if (data && data.length > 0) {
+                    let html = '<table border="1" style="width: 100%; border-collapse: collapse;">';
+                    html += '<tr><th>日期</th><th>访问量</th><th>独立访客</th></tr>';
+                    data.forEach(day => {
+                        html += `<tr><td>${day.date}</td><td>${day.daily_pv}</td><td>${day.daily_uv}</td></tr>`;
+                    });
+                    html += '</table>';
+                    document.getElementById('daily-content').innerHTML = html;
+                    document.getElementById('stats-daily').style.display = 'block';
+                }
+            } catch (error) {
+                document.getElementById('raw-response').textContent = 'Error: ' + error.message;
+            }
+        }
+        
+        async function getPageStats() {
+            if (!blogStats) {
+                alert('请先初始化统计客户端');
+                return;
+            }
+            
+            try {
+                const data = await blogStats.getPageStats();
+                document.getElementById('raw-response').textContent = JSON.stringify(data, null, 2);
+                
+                if (data && data.length > 0) {
+                    let html = '<table border="1" style="width: 100%; border-collapse: collapse;">';
+                    html += '<tr><th>页面路径</th><th>访问量</th><th>独立访客</th></tr>';
+                    data.slice(0, 10).forEach(page => {
+                        html += `<tr><td>${page.path}</td><td>${page.page_pv}</td><td>${page.page_uv}</td></tr>`;
+                    });
+                    html += '</table>';
+                    document.getElementById('page-content').innerHTML = html;
+                    document.getElementById('stats-page').style.display = 'block';
+                }
+            } catch (error) {
+                document.getElementById('raw-response').textContent = 'Error: ' + error.message;
+            }
+        }
+        
+        async function getRecentVisits() {
+            if (!blogStats) {
+                alert('请先初始化统计客户端');
+                return;
+            }
+            
+            try {
+                const data = await blogStats.getRecentVisits(7);
+                document.getElementById('raw-response').textContent = JSON.stringify(data, null, 2);
+                
+                if (data && data.length > 0) {
+                    let html = '<table border="1" style="width: 100%; border-collapse: collapse;">';
+                    html += '<tr><th>页面路径</th><th>国家</th><th>访问时间</th></tr>';
+                    data.slice(0, 20).forEach(visit => {
+                        const date = new Date(visit.created_at).toLocaleString('zh-CN');
+                        html += `<tr><td>${visit.path}</td><td>${visit.country}</td><td>${date}</td></tr>`;
+                    });
+                    html += '</table>';
+                    document.getElementById('recent-content').innerHTML = html;
+                    document.getElementById('stats-recent').style.display = 'block';
+                }
+            } catch (error) {
+                document.getElementById('raw-response').textContent = 'Error: ' + error.message;
+            }
+        }
+        
+        // 页面加载时自动初始化
+        window.addEventListener('load', function() {
+            // 如果 BlogStats 类可用，自动初始化
+            if (typeof BlogStats !== 'undefined') {
+                initStats();
+            } else {
+                console.log('BlogStats 类未加载，请手动初始化');
+            }
+        });
+    </script>
+    
+    <!-- 尝试加载 BlogStats 客户端 -->
+    <script>
+        // 动态加载 BlogStats 脚本
+        const script = document.createElement('script');
+        script.src = document.getElementById('apiUrl').value + '/client/blog-stats.js';
+        script.onerror = function() {
+            console.log('无法加载 BlogStats 客户端脚本，请确保 API URL 正确');
+        };
+        document.head.appendChild(script);
+    </script>
+</body>
+</html>
