@@ -112,9 +112,24 @@
         let blogStats = null;
         
         function initStats() {
-            const apiUrl = document.getElementById('apiUrl').value;
-            blogStats = new BlogStats(apiUrl);
-            alert('统计客户端已初始化: ' + apiUrl);
+            try {
+                const apiUrl = document.getElementById('apiUrl').value;
+                
+                if (typeof BlogStats === 'undefined') {
+                    alert('❌ BlogStats 类未加载，请检查客户端脚本是否正确加载');
+                    return;
+                }
+                
+                blogStats = new BlogStats(apiUrl);
+                alert('✅ 统计客户端已初始化: ' + apiUrl);
+                
+                // 显示调试信息
+                console.log('BlogStats 初始化成功:', apiUrl);
+                
+            } catch (error) {
+                alert('❌ 初始化失败: ' + error.message);
+                console.error('初始化错误:', error);
+            }
         }
         
         async function recordVisit() {
@@ -260,8 +275,19 @@
             }
         }
         
-        // 页面加载时自动初始化
+
+    </script>
+    
+    <!-- 直接加载 BlogStats 客户端 -->
+    <script src="/client/blog-stats.js"></script>
+    
+    <script>
+        // 页面加载完成后设置正确的 API URL
         window.addEventListener('load', function() {
+            // 自动设置当前域名作为 API URL
+            const currentDomain = window.location.origin;
+            document.getElementById('apiUrl').value = currentDomain;
+            
             // 如果 BlogStats 类可用，自动初始化
             if (typeof BlogStats !== 'undefined') {
                 initStats();
@@ -269,17 +295,6 @@
                 console.log('BlogStats 类未加载，请手动初始化');
             }
         });
-    </script>
-    
-    <!-- 尝试加载 BlogStats 客户端 -->
-    <script>
-        // 动态加载 BlogStats 脚本
-        const script = document.createElement('script');
-        script.src = document.getElementById('apiUrl').value + '/client/blog-stats.js';
-        script.onerror = function() {
-            console.log('无法加载 BlogStats 客户端脚本，请确保 API URL 正确');
-        };
-        document.head.appendChild(script);
     </script>
 </body>
 </html>
