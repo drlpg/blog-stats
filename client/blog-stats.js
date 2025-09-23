@@ -1,5 +1,5 @@
 /**
- * 博客统计客户端 - CORS修复版
+ * 博客统计客户端 - 修复版
  */
 
 (function() {
@@ -7,7 +7,6 @@
   
   const API_BASE = 'https://stats.lpblog.dpdns.org';
   let visitRecorded = false;
-  let statsLoaded = false;
   
   console.log('📊 博客统计脚本已加载');
   
@@ -29,103 +28,73 @@
       
       if (response.ok) {
         visitRecorded = true;
-        console.log('✅ 访问记录成功');
-      } else {
-        console.warn('⚠️ 访问记录失败:', response.status);
+        console.log('Visit recorded successfully');
       }
     } catch (error) {
-      console.error('❌ 访问记录失败:', error);
-      // CORS失败时静默处理，不影响统计显示
+      console.error('Failed to record visit:', error);
     }
   }
   
   // 获取统计数据
   async function fetchStats() {
     try {
+      console.log('🔍 开始获取统计数据...');
+      
       // 获取总体统计
       const summaryResponse = await fetch(`${API_BASE}/api/stats?type=summary`);
-      
-      if (!summaryResponse.ok) {
-        throw new Error(`HTTP ${summaryResponse.status}`);
-      }
-      
       const summaryResult = await summaryResponse.json();
       
       // 获取当前页面统计
       const pageResponse = await fetch(`${API_BASE}/api/stats?type=page&path=${encodeURIComponent(window.location.pathname)}`);
-      const pageResult = pageResponse.ok ? await pageResponse.json() : { success: false };
+      const pageResult = await pageResponse.json();
+      
+      console.log('📊 API响应:', { summaryResult, pageResult });
       
       if (summaryResult.success && summaryResult.data) {
         updateSiteStats(summaryResult.data);
-        
-        if (pageResult.success && pageResult.data) {
-          updatePageStats(pageResult.data);
-        }
-        
-        console.log('✅ 统计数据加载成功');
-      } else {
-        throw new Error('API返回错误');
+        console.log('✅ 站点统计更新完成');
       }
       
       if (pageResult.success && pageResult.data) {
         updatePageStats(pageResult.data);
+        console.log('✅ 页面统计更新完成');
       }
       
     } catch (error) {
       console.error('❌ 统计数据获取失败:', error);
-      // CORS失败时显示备用数据
       showFallbackStats();
     }
   }
   
   // 显示备用统计数据
   function showFallbackStats() {
-    updateElements([
-      '#busuanzi_value_site_pv',
-      '.site-pv',
-      '[data-busuanzi-value="site_pv"]'
-    ], '---');
-    
-    updateElements([
-      '#busuanzi_value_site_uv', 
-      '.site-uv',
-      '[data-busuanzi-value="site_uv"]'
-    ], '---');
-    
-    updateElements([
-      '#busuanzi_value_page_pv',
-      '.page-pv',
-      '[data-busuanzi-value="page_pv"]'
-    ], '---');
-    
-    showElements([
-      '#busuanzi_container_site_pv',
-      '#busuanzi_container_site_uv',
-      '#busuanzi_container_page_pv',
-      '.busuanzi_container_site_pv',
-      '.busuanzi_container_site_uv',
-      '.busuanzi_container_page_pv'
-    ]);
-    
     console.log('📊 显示备用统计数据');
+    updateSiteStats({ total_pv: '---', total_uv: '---' });
+    updatePageStats({ page_pv: '---' });
   }
   }
   
   // 更新站点统计
   function updateSiteStats(data) {
+    console.log('🔄 更新站点统计:', data);
+    
     // 站点总访问量
-    updateElements([
+    const sitePvUpdated = updateElements([
       '#busuanzi_value_site_pv',
       '.site-pv',
-      '[data-busuanzi-value="site_pv"]'
+      '[data-busuanzi-value="site_pv"]',
+      'span[id*="site_pv"]'
     ], data.total_pv || 0);
     
     // 站点独立访客
-    updateElements([
+    const siteUvUpdated = updateElements([
       '#busuanzi_value_site_uv', 
       '.site-uv',
-      '[data-busuanzi-value="site_uv"]'
+      '[data-busuanzi-value="site_uv"]',
+      'span[id*="site_uv"]'
     ], data.total_uv || 0);
+    
+    console.log(`📊 站点统计更新: PV(${sitePvUpdated}个), UV(${siteUvUpdated}个)`);
     
     // 显示统计容器
     showElements([
@@ -138,12 +107,17 @@
   
   // 更新页面统计
   function updatePageStats(data) {
+    console.log('🔄 更新页面统计:', data);
+    
     // 页面访问量
-    updateElements([
+    const pagePvUpdated = updateElements([
       '#busuanzi_value_page_pv',
       '.page-pv',
-      '[data-busuanzi-value="page_pv"]'
+      '[data-busuanzi-value="page_pv"]',
+      'span[id*="page_pv"]'
     ], data.page_pv || 0);
+    
+    console.log(`📊 页面统计更新: PV(${pagePvUpdated}个)`);
     
     // 显示页面统计容器
     showElements([
@@ -154,14 +128,18 @@
   
   // 更新元素内容
   function updateElements(selectors, value) {
+    let updateCount = 0;
     selectors.forEach(selector => {
       const elements = document.querySelectorAll(selector);
       elements.forEach(el => {
         if (el) {
           el.textContent = value;
+          updateCount++;
+          console.log(`✅ 更新元素: ${selector} -> ${value}`);
         }
       });
     });
+    return updateCount;
   }
   
   // 显示元素
