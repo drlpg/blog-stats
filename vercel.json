@@ -3,12 +3,12 @@
   "rewrites": [
     {
       "source": "/client/blog-stats.js",
-      "destination": "/blog-stats.js"
+      "destination": "/client/blog-stats.js"
     }
   ],
   "headers": [
     {
-      "source": "/blog-stats.js",
+      "source": "/client/blog-stats.js",
       "headers": [
         {
           "key": "Content-Type",
@@ -20,7 +20,7 @@
         },
         {
           "key": "Cache-Control",
-          "value": "public, max-age=3600"
+          "value": "public, max-age=300"
         }
       ]
     }
