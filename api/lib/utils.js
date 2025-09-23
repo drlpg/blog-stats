@@ -34,12 +34,8 @@ export function getCountry(req) {
  * CORS 处理
  */
 export function setCORSHeaders(res, origin = '*') {
-  const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',') || ['*'];
-  
-  if (allowedOrigins.includes('*') || allowedOrigins.includes(origin)) {
-    res.setHeader('Access-Control-Allow-Origin', origin);
-  }
-  
+  // 直接设置允许所有来源，解决本地开发CORS问题
+  res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
   res.setHeader('Access-Control-Max-Age', '86400');

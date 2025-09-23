@@ -1,5 +1,5 @@
 /**
- * 博客统计客户端
+ * 博客统计客户端 - CORS修复版
  */
 
 (function() {
@@ -8,6 +8,8 @@
   const API_BASE = 'https://stats.lpblog.dpdns.org';
   let visitRecorded = false;
   let statsLoaded = false;
+  
+  console.log('📊 博客统计脚本已加载');
   
   // 记录访问
   async function recordVisit() {
@@ -27,10 +29,13 @@
       
       if (response.ok) {
         visitRecorded = true;
-        console.log('Visit recorded successfully');
+        console.log('✅ 访问记录成功');
+      } else {
+        console.warn('⚠️ 访问记录失败:', response.status);
       }
     } catch (error) {
-      console.error('Failed to record visit:', error);
+      console.error('❌ 访问记录失败:', error);
+      // CORS失败时静默处理，不影响统计显示
     }
   }
   
@@ -39,14 +44,27 @@
     try {
       // 获取总体统计
       const summaryResponse = await fetch(`${API_BASE}/api/stats?type=summary`);
+      
+      if (!summaryResponse.ok) {
+        throw new Error(`HTTP ${summaryResponse.status}`);
+      }
+      
       const summaryResult = await summaryResponse.json();
       
       // 获取当前页面统计
       const pageResponse = await fetch(`${API_BASE}/api/stats?type=page&path=${encodeURIComponent(window.location.pathname)}`);
-      const pageResult = await pageResponse.json();
+      const pageResult = pageResponse.ok ? await pageResponse.json() : { success: false };
       
       if (summaryResult.success && summaryResult.data) {
         updateSiteStats(summaryResult.data);
+        
+        if (pageResult.success && pageResult.data) {
+          updatePageStats(pageResult.data);
+        }
+        
+        console.log('✅ 统计数据加载成功');
+      } else {
+        throw new Error('API返回错误');
       }
       
       if (pageResult.success && pageResult.data) {
@@ -54,8 +72,43 @@
       }
       
     } catch (error) {
-      console.error('Failed to fetch stats:', error);
+      console.error('❌ 统计数据获取失败:', error);
+      // CORS失败时显示备用数据
+      showFallbackStats();
     }
+  }
+  
+  // 显示备用统计数据
+  function showFallbackStats() {
+    updateElements([
+      '#busuanzi_value_site_pv',
+      '.site-pv',
+      '[data-busuanzi-value="site_pv"]'
+    ], '---');
+    
+    updateElements([
+      '#busuanzi_value_site_uv', 
+      '.site-uv',
+      '[data-busuanzi-value="site_uv"]'
+    ], '---');
+    
+    updateElements([
+      '#busuanzi_value_page_pv',
+      '.page-pv',
+      '[data-busuanzi-value="page_pv"]'
+    ], '---');
+    
+    showElements([
+      '#busuanzi_container_site_pv',
+      '#busuanzi_container_site_uv',
+      '#busuanzi_container_page_pv',
+      '.busuanzi_container_site_pv',
+      '.busuanzi_container_site_uv',
+      '.busuanzi_container_page_pv'
+    ]);
+    
+    console.log('📊 显示备用统计数据');
+  }
   }
   
   // 更新站点统计
