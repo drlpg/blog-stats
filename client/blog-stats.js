@@ -7,6 +7,7 @@
   
   const API_BASE = 'https://stats.lpblog.dpdns.org';
   let visitRecorded = false;
+  let statsLoaded = false;
   
   console.log('📊 博客统计脚本已加载');
   
@@ -162,10 +163,8 @@
     // 记录访问
     recordVisit();
     
-    // 延迟获取统计数据，确保页面元素已加载
-    setTimeout(() => {
-      fetchStats();
-    }, 1500);
+    // 立即获取统计数据
+    fetchStats();
     
     statsLoaded = true;
     console.log('✅ 博客统计初始化完成');
