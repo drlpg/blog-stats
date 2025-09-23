@@ -8,12 +8,13 @@
   const API_BASE = "https://stats.lpblog.dpdns.org";
   let visitRecorded = false;
   let statsLoaded = false;
-  
-  // 防止重复初始化
-  if (window.blogStatsInitialized) {
+
+  // PJAX 兼容性处理
+  if (window.blogStatsInstance) {
+    // 如果已有实例，重新获取统计数据
+    window.blogStatsInstance.fetchStats();
     return;
   }
-  window.blogStatsInitialized = true;
 
   // 记录访问
   async function recordVisit() {
@@ -47,7 +48,11 @@
       const summaryResult = await summaryResponse.json();
 
       // 获取当前页面统计
-      const pageResponse = await fetch(`${API_BASE}/api/stats?type=page&path=${encodeURIComponent(window.location.pathname)}`);
+      const pageResponse = await fetch(
+        `${API_BASE}/api/stats?type=page&path=${encodeURIComponent(
+          window.location.pathname
+        )}`
+      );
       const pageResult = await pageResponse.json();
 
       if (summaryResult.success && summaryResult.data) {
@@ -72,22 +77,31 @@
   // 更新站点统计
   function updateSiteStats(data) {
     // 站点总访问量
-    updateElements(["#busuanzi_site_pv", "#busuanzi_value_site_pv"], data.total_pv || 0);
-    
+    updateElements(
+      ["#busuanzi_site_pv", "#busuanzi_value_site_pv"],
+      data.total_pv || 0
+    );
+
     // 站点独立访客
-    updateElements(["#busuanzi_site_uv", "#busuanzi_value_site_uv"], data.total_uv || 0);
+    updateElements(
+      ["#busuanzi_site_uv", "#busuanzi_value_site_uv"],
+      data.total_uv || 0
+    );
 
     // 显示统计容器
     showElements([
       "#busuanzi_container_site_pv",
-      "#busuanzi_container_site_uv"
+      "#busuanzi_container_site_uv",
     ]);
   }
 
   // 更新页面统计
   function updatePageStats(data) {
     // 页面访问量
-    updateElements(["#busuanzi_page_pv", "#busuanzi_value_page_pv"], data.page_pv || 0);
+    updateElements(
+      ["#busuanzi_page_pv", "#busuanzi_value_page_pv"],
+      data.page_pv || 0
+    );
 
     // 显示页面统计容器
     showElements(["#busuanzi_container_page_pv"]);
@@ -96,7 +110,7 @@
   // 更新元素内容
   function updateElements(selectors, value) {
     const updatedElements = new Set(); // 防止重复更新同一元素
-    
+
     selectors.forEach((selector) => {
       const elements = document.querySelectorAll(selector);
       elements.forEach((el) => {
@@ -141,6 +155,29 @@
       setTimeout(init, 500);
     }
   }
+
+  // PJAX 兼容性：监听 PJAX 页面切换事件
+  document.addEventListener("pjax:complete", function () {
+    // PJAX 切换完成后重新获取统计数据
+    setTimeout(() => {
+      visitRecorded = false; // 重置访问记录状态
+      init();
+    }, 100);
+  });
+
+  // 兼容其他可能的页面切换事件
+  document.addEventListener("DOMContentLoaded", function () {
+    if (!statsLoaded) {
+      init();
+    }
+  });
+
+  // 创建全局实例，支持 PJAX
+  window.blogStatsInstance = {
+    fetchStats: fetchStats,
+    recordVisit: recordVisit,
+    loaded: () => statsLoaded,
+  };
 
   // 兼容原版busuanzi的全局变量和方法
   window.busuanzi = {
@@ -189,8 +226,6 @@
       const result = await response.json();
       return result.success ? result.data : null;
     };
-
-
   };
 
   // 启动初始化
