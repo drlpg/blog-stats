@@ -21,27 +21,19 @@
     if (visitRecorded) return;
 
     try {
-      const requestData = {
-        path: window.location.pathname,
-        referrer: document.referrer,
-      };
-
-      console.log("Recording visit with data:", requestData);
-
       const response = await fetch(`${API_BASE}/api/visit`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(requestData),
+        body: JSON.stringify({
+          path: window.location.pathname,
+          referrer: document.referrer,
+        }),
       });
 
       if (response.ok) {
         visitRecorded = true;
-        console.log("Visit recorded successfully");
-      } else {
-        const errorData = await response.json();
-        console.error("Failed to record visit:", response.status, errorData);
       }
     } catch (error) {
       console.error("Failed to record visit:", error);
