@@ -1,6 +1,74 @@
 import { supabase } from './lib/supabase.js';
 import { setCORSHeaders, errorResponse, successResponse } from './lib/utils.js';
 
+// 缓存配置
+const CACHE_TTL = 60 * 1000; // 1分钟缓存
+const cache = new Map();
+
+// 通用分页获取函数
+async function fetchAllRecords(tableName, selectFields, filters = {}) {
+  let allRecords = [];
+  let page = 0;
+  const pageSize = 1000;
+  let hasMore = true;
+  
+  while (hasMore) {
+    let query = supabase
+      .from(tableName)
+      .select(selectFields)
+      .range(page * pageSize, (page + 1) * pageSize - 1);
+    
+    // 应用过滤条件
+    Object.entries(filters).forEach(([key, value]) => {
+      if (key === 'eq') {
+        Object.entries(value).forEach(([field, val]) => {
+          query = query.eq(field, val);
+        });
+      }
+    });
+    
+    const { data, error } = await query;
+    
+    if (error) {
+      console.error(`Fetch error for ${tableName}:`, error);
+      break;
+    }
+    
+    if (data && data.length > 0) {
+      allRecords = allRecords.concat(data);
+      page++;
+      hasMore = data.length === pageSize;
+    } else {
+      hasMore = false;
+    }
+  }
+  
+  return allRecords;
+}
+
+// 缓存辅助函数
+function getCachedData(key) {
+  const cached = cache.get(key);
+  if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+    return cached.data;
+  }
+  return null;
+}
+
+function setCachedData(key, data) {
+  cache.set(key, { data, timestamp: Date.now() });
+  
+  // 清理过期缓存
+  if (cache.size > 100) {
+    const now = Date.now();
+    for (const [k, v] of cache.entries()) {
+      if (now - v.timestamp > CACHE_TTL) {
+        cache.delete(k);
+      }
+    }
+  }
+}
+
 export default async function handler(req, res) {
   // 设置 CORS
   setCORSHeaders(res, req.headers.origin);
@@ -44,54 +112,41 @@ export default async function handler(req, res) {
 // 获取总体统计
 async function getSummaryStats(res) {
   try {
-    // 使用 count 获取总PV（更高效）
-    const { count: totalPv, error: pvError } = await supabase
-      .from('visits')
-      .select('*', { count: 'exact', head: true });
+    // 检查缓存
+    const cacheKey = 'summary_stats';
+    const cached = getCachedData(cacheKey);
+    if (cached) {
+      return successResponse(res, cached);
+    }
     
-    if (pvError) {
-      console.error('PV count error:', pvError);
+    // 并行获取PV和数据
+    const [pvResult, allVisits] = await Promise.all([
+      supabase.from('visits').select('*', { count: 'exact', head: true }),
+      fetchAllRecords('visits', 'ip_hash, created_at')
+    ]);
+    
+    if (pvResult.error) {
+      console.error('PV count error:', pvResult.error);
       return errorResponse(res, 'Failed to fetch PV stats', 500);
     }
     
-    // 获取所有唯一IP和日期（需要实际数据）
-    // 使用分页获取所有记录
-    let allVisits = [];
-    let page = 0;
-    const pageSize = 1000;
-    let hasMore = true;
+    // 使用 Set 高效计算唯一值
+    const uniqueIps = new Set();
+    const uniqueDates = new Set();
     
-    while (hasMore) {
-      const { data: visits, error } = await supabase
-        .from('visits')
-        .select('ip_hash, created_at')
-        .range(page * pageSize, (page + 1) * pageSize - 1);
-      
-      if (error) {
-        console.error('Visits fetch error:', error);
-        break;
-      }
-      
-      if (visits && visits.length > 0) {
-        allVisits = allVisits.concat(visits);
-        page++;
-        hasMore = visits.length === pageSize;
-      } else {
-        hasMore = false;
-      }
-    }
-    
-    // 计算UV和活跃天数
-    const uniqueIps = new Set(allVisits.map(v => v.ip_hash));
-    const totalUv = uniqueIps.size;
-    const uniqueDates = new Set(allVisits.map(v => v.created_at.split('T')[0]));
-    const activeDays = uniqueDates.size;
+    allVisits.forEach(visit => {
+      uniqueIps.add(visit.ip_hash);
+      uniqueDates.add(visit.created_at.split('T')[0]);
+    });
     
     const stats = {
-      total_pv: totalPv || 0,
-      total_uv: totalUv,
-      active_days: activeDays
+      total_pv: pvResult.count || 0,
+      total_uv: uniqueIps.size,
+      active_days: uniqueDates.size
     };
+    
+    // 缓存结果
+    setCachedData(cacheKey, stats);
     
     return successResponse(res, stats);
   } catch (error) {
@@ -119,103 +174,74 @@ async function getDailyStats(res, days) {
 async function getPageStats(res, specificPath) {
   try {
     if (specificPath) {
-      // 查询特定页面的统计 - 使用count获取PV
-      const { count: pagePv, error: pvError } = await supabase
-        .from('visits')
-        .select('*', { count: 'exact', head: true })
-        .eq('path', specificPath);
-      
-      if (pvError) {
-        console.error('Page PV count error:', pvError);
-        return errorResponse(res, 'Failed to fetch page PV', 500);
+      // 特定页面统计
+      const cacheKey = `page_stats_${specificPath}`;
+      const cached = getCachedData(cacheKey);
+      if (cached) {
+        return successResponse(res, cached);
       }
       
-      // 分页获取所有IP用于计算UV
-      let allIps = [];
-      let page = 0;
-      const pageSize = 1000;
-      let hasMore = true;
+      // 并行获取PV和IP数据
+      const [pvResult, allIps] = await Promise.all([
+        supabase.from('visits').select('*', { count: 'exact', head: true }).eq('path', specificPath),
+        fetchAllRecords('visits', 'ip_hash', { eq: { path: specificPath } })
+      ]);
       
-      while (hasMore) {
-        const { data: visits, error } = await supabase
-          .from('visits')
-          .select('ip_hash')
-          .eq('path', specificPath)
-          .range(page * pageSize, (page + 1) * pageSize - 1);
-        
-        if (error) {
-          console.error('Page visits fetch error:', error);
-          break;
-        }
-        
-        if (visits && visits.length > 0) {
-          allIps = allIps.concat(visits.map(v => v.ip_hash));
-          page++;
-          hasMore = visits.length === pageSize;
-        } else {
-          hasMore = false;
-        }
+      if (pvResult.error) {
+        console.error('Page PV count error:', pvResult.error);
+        return errorResponse(res, 'Failed to fetch page PV', 500);
       }
       
       const pageStats = {
         path: specificPath,
-        page_pv: pagePv || 0,
-        page_uv: new Set(allIps).size
+        page_pv: pvResult.count || 0,
+        page_uv: new Set(allIps.map(v => v.ip_hash)).size
       };
       
+      setCachedData(cacheKey, pageStats);
       return successResponse(res, pageStats);
-    } else {
-      // 查询所有页面的统计 - 使用分页获取所有数据
-      let allVisits = [];
-      let page = 0;
-      const pageSize = 1000;
-      let hasMore = true;
       
-      while (hasMore) {
-        const { data: visits, error } = await supabase
-          .from('visits')
-          .select('path, ip_hash')
-          .range(page * pageSize, (page + 1) * pageSize - 1);
-        
-        if (error) {
-          console.error('Page stats error:', error);
-          return errorResponse(res, 'Failed to fetch page stats', 500);
-        }
-        
-        if (visits && visits.length > 0) {
-          allVisits = allVisits.concat(visits);
-          page++;
-          hasMore = visits.length === pageSize;
-        } else {
-          hasMore = false;
-        }
+    } else {
+      // 所有页面统计
+      const cacheKey = 'all_page_stats';
+      const cached = getCachedData(cacheKey);
+      if (cached) {
+        return successResponse(res, cached);
       }
+      
+      const allVisits = await fetchAllRecords('visits', 'path, ip_hash');
       
       if (allVisits.length === 0) {
         return successResponse(res, []);
       }
       
-      // 按页面分组统计
-      const pageStatsMap = {};
+      // 使用 Map 优化分组统计
+      const pageStatsMap = new Map();
+      
       allVisits.forEach(visit => {
-        if (!pageStatsMap[visit.path]) {
-          pageStatsMap[visit.path] = {
+        if (!pageStatsMap.has(visit.path)) {
+          pageStatsMap.set(visit.path, {
             path: visit.path,
             page_pv: 0,
             unique_ips: new Set()
-          };
+          });
         }
-        pageStatsMap[visit.path].page_pv++;
-        pageStatsMap[visit.path].unique_ips.add(visit.ip_hash);
+        const stats = pageStatsMap.get(visit.path);
+        stats.page_pv++;
+        stats.unique_ips.add(visit.ip_hash);
       });
       
-      // 转换为数组并计算 UV
-      const pageStats = Object.values(pageStatsMap).map(stats => ({
-        path: stats.path,
-        page_pv: stats.page_pv,
-        page_uv: stats.unique_ips.size
-      })).sort((a, b) => b.page_pv - a.page_pv).slice(0, 50);
+      // 转换为数组并排序
+      const pageStats = Array.from(pageStatsMap.values())
+        .map(stats => ({
+          path: stats.path,
+          page_pv: stats.page_pv,
+          page_uv: stats.unique_ips.size
+        }))
+        .sort((a, b) => b.page_pv - a.page_pv)
+        .slice(0, 50);
       
+      setCachedData(cacheKey, pageStats);
       return successResponse(res, pageStats);
     }
   } catch (error) {
