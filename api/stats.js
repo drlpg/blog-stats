@@ -44,25 +44,51 @@ export default async function handler(req, res) {
 // 获取总体统计
 async function getSummaryStats(res) {
   try {
-    // 直接查询基础表，避免视图权限问题
-    const { data: visits, error } = await supabase
+    // 使用 count 获取总PV（更高效）
+    const { count: totalPv, error: pvError } = await supabase
       .from('visits')
-      .select('id, ip_hash, created_at');
+      .select('*', { count: 'exact', head: true });
     
-    if (error) {
-      console.error('Summary stats error:', error);
-      return errorResponse(res, 'Failed to fetch summary stats', 500);
+    if (pvError) {
+      console.error('PV count error:', pvError);
+      return errorResponse(res, 'Failed to fetch PV stats', 500);
     }
     
-    // 手动计算统计数据
-    const totalPv = visits.length;
-    const uniqueIps = new Set(visits.map(v => v.ip_hash));
+    // 获取所有唯一IP和日期（需要实际数据）
+    // 使用分页获取所有记录
+    let allVisits = [];
+    let page = 0;
+    const pageSize = 1000;
+    let hasMore = true;
+    
+    while (hasMore) {
+      const { data: visits, error } = await supabase
+        .from('visits')
+        .select('ip_hash, created_at')
+        .range(page * pageSize, (page + 1) * pageSize - 1);
+      
+      if (error) {
+        console.error('Visits fetch error:', error);
+        break;
+      }
+      
+      if (visits && visits.length > 0) {
+        allVisits = allVisits.concat(visits);
+        page++;
+        hasMore = visits.length === pageSize;
+      } else {
+        hasMore = false;
+      }
+    }
+    
+    // 计算UV和活跃天数
+    const uniqueIps = new Set(allVisits.map(v => v.ip_hash));
     const totalUv = uniqueIps.size;
-    const uniqueDates = new Set(visits.map(v => v.created_at.split('T')[0]));
+    const uniqueDates = new Set(allVisits.map(v => v.created_at.split('T')[0]));
     const activeDays = uniqueDates.size;
     
     const stats = {
-      total_pv: totalPv,
+      total_pv: totalPv || 0,
       total_uv: totalUv,
       active_days: activeDays
     };
@@ -93,44 +119,85 @@ async function getDailyStats(res, days) {
 async function getPageStats(res, specificPath) {
   try {
     if (specificPath) {
-      // 查询特定页面的统计
-      const { data: visits, error } = await supabase
+      // 查询特定页面的统计 - 使用count获取PV
+      const { count: pagePv, error: pvError } = await supabase
         .from('visits')
-        .select('id, ip_hash')
+        .select('*', { count: 'exact', head: true })
         .eq('path', specificPath);
       
-      if (error) {
-        console.error('Page stats error:', error);
-        return errorResponse(res, 'Failed to fetch page stats', 500);
+      if (pvError) {
+        console.error('Page PV count error:', pvError);
+        return errorResponse(res, 'Failed to fetch page PV', 500);
+      }
+      
+      // 分页获取所有IP用于计算UV
+      let allIps = [];
+      let page = 0;
+      const pageSize = 1000;
+      let hasMore = true;
+      
+      while (hasMore) {
+        const { data: visits, error } = await supabase
+          .from('visits')
+          .select('ip_hash')
+          .eq('path', specificPath)
+          .range(page * pageSize, (page + 1) * pageSize - 1);
+        
+        if (error) {
+          console.error('Page visits fetch error:', error);
+          break;
+        }
+        
+        if (visits && visits.length > 0) {
+          allIps = allIps.concat(visits.map(v => v.ip_hash));
+          page++;
+          hasMore = visits.length === pageSize;
+        } else {
+          hasMore = false;
+        }
       }
       
       const pageStats = {
         path: specificPath,
-        page_pv: visits.length,
-        page_uv: new Set(visits.map(v => v.ip_hash)).size
+        page_pv: pagePv || 0,
+        page_uv: new Set(allIps).size
       };
       
       return successResponse(res, pageStats);
     } else {
-      // 查询所有页面的统计
-      const { data: visits, error } = await supabase
-        .from('visits')
-        .select('path, ip_hash');
+      // 查询所有页面的统计 - 使用分页获取所有数据
+      let allVisits = [];
+      let page = 0;
+      const pageSize = 1000;
+      let hasMore = true;
       
-      if (error) {
-        console.error('Page stats error:', error);
-        return errorResponse(res, 'Failed to fetch page stats', 500);
+      while (hasMore) {
+        const { data: visits, error } = await supabase
+          .from('visits')
+          .select('path, ip_hash')
+          .range(page * pageSize, (page + 1) * pageSize - 1);
+        
+        if (error) {
+          console.error('Page stats error:', error);
+          return errorResponse(res, 'Failed to fetch page stats', 500);
+        }
+        
+        if (visits && visits.length > 0) {
+          allVisits = allVisits.concat(visits);
+          page++;
+          hasMore = visits.length === pageSize;
+        } else {
+          hasMore = false;
+        }
       }
       
-      console.log('Visits data:', visits); // 调试日志
-      
-      if (!visits || visits.length === 0) {
+      if (allVisits.length === 0) {
         return successResponse(res, []);
       }
       
       // 按页面分组统计
       const pageStatsMap = {};
-      visits.forEach(visit => {
+      allVisits.forEach(visit => {
         if (!pageStatsMap[visit.path]) {
           pageStatsMap[visit.path] = {
             path: visit.path,
@@ -148,8 +215,6 @@ async function getPageStats(res, specificPath) {
         page_pv: stats.page_pv,
         page_uv: stats.unique_ips.size
       })).sort((a, b) => b.page_pv - a.page_pv).slice(0, 50);
-      
-      console.log('Page stats result:', pageStats); // 调试日志
       
       return successResponse(res, pageStats);
     }
