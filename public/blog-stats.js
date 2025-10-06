@@ -21,19 +21,27 @@
     if (visitRecorded) return;
 
     try {
+      const requestData = {
+        path: window.location.pathname,
+        referrer: document.referrer,
+      };
+
+      console.log("Recording visit with data:", requestData);
+
       const response = await fetch(`${API_BASE}/api/visit`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          path: window.location.pathname,
-          referrer: document.referrer,
-        }),
+        body: JSON.stringify(requestData),
       });
 
       if (response.ok) {
         visitRecorded = true;
+        console.log("Visit recorded successfully");
+      } else {
+        const errorData = await response.json();
+        console.error("Failed to record visit:", response.status, errorData);
       }
     } catch (error) {
       console.error("Failed to record visit:", error);
@@ -97,10 +105,11 @@
 
   // 更新页面统计
   function updatePageStats(data) {
-    // 页面访问量
+    // 页面访问量（如果已记录访问但数据库返回0，显示1）
+    const pagePv = data.page_pv || (visitRecorded ? 1 : 0);
     updateElements(
       ["#busuanzi_page_pv", "#busuanzi_value_page_pv"],
-      data.page_pv || 0
+      pagePv
     );
 
     // 显示页面统计容器
@@ -136,12 +145,17 @@
   }
 
   // 初始化函数
-  function init() {
-    // 记录访问
-    recordVisit();
+  async function init() {
+    // 先获取统计数据
+    await fetchStats();
 
-    // 立即获取统计数据
-    fetchStats();
+    // 记录访问（异步，不阻塞）
+    recordVisit().then(() => {
+      // 访问记录成功后，延迟刷新统计数据
+      setTimeout(() => {
+        fetchStats();
+      }, 2000);
+    });
 
     statsLoaded = true;
   }
