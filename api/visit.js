@@ -28,11 +28,13 @@ export default async function handler(req, res) {
     
     // 验证必需参数
     if (!path) {
+      console.error('Missing path parameter');
       return errorResponse(res, 'Path is required');
     }
     
     // 验证路径格式
     if (!validatePath(path)) {
+      console.error('Invalid path format:', path);
       return errorResponse(res, 'Invalid path format');
     }
     
