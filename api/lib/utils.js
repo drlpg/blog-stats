@@ -61,7 +61,7 @@ export function validatePath(path) {
   
   // 简化验证：只检查基本安全性，允许大部分URL字符
   // 禁止危险字符如 <, >, ", ', \, null字符等
-  return !/[<>"'\\\\x00-\\x1f\\x7f]/.test(path);
+  return !/[<>"'\\x00-\x1f\x7f]/.test(path);
 }
 
 /**

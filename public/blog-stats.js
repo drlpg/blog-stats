@@ -27,6 +27,9 @@
       // 确保路径以/开头
       const normalizedPath = path.startsWith("/") ? path : "/" + path;
 
+      // 调试信息
+      console.log("Recording visit:", { path: normalizedPath, referrer });
+
       const response = await fetch(`${API_BASE}/api/visit`, {
         method: "POST",
         headers: {
@@ -40,9 +43,11 @@
 
       if (response.ok) {
         visitRecorded = true;
+        console.log("Visit recorded successfully");
       } else {
         const errorData = await response.json().catch(() => ({}));
         console.error("Failed to record visit:", response.status, errorData);
+        console.error("Sent data:", { path: normalizedPath, referrer });
       }
     } catch (error) {
       console.error("Failed to record visit:", error);
