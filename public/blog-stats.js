@@ -21,19 +21,28 @@
     if (visitRecorded) return;
 
     try {
+      const path = window.location.pathname;
+      const referrer = document.referrer;
+
+      // 确保路径以/开头
+      const normalizedPath = path.startsWith("/") ? path : "/" + path;
+
       const response = await fetch(`${API_BASE}/api/visit`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          path: window.location.pathname,
-          referrer: document.referrer,
+          path: normalizedPath,
+          referrer: referrer || "",
         }),
       });
 
       if (response.ok) {
         visitRecorded = true;
+      } else {
+        const errorData = await response.json().catch(() => ({}));
+        console.error("Failed to record visit:", response.status, errorData);
       }
     } catch (error) {
       console.error("Failed to record visit:", error);
@@ -99,10 +108,7 @@
   function updatePageStats(data) {
     // 页面访问量（如果已记录访问但数据库返回0，显示1）
     const pagePv = data.page_pv || (visitRecorded ? 1 : 0);
-    updateElements(
-      ["#busuanzi_page_pv", "#busuanzi_value_page_pv"],
-      pagePv
-    );
+    updateElements(["#busuanzi_page_pv", "#busuanzi_value_page_pv"], pagePv);
 
     // 显示页面统计容器
     showElements(["#busuanzi_container_page_pv"]);
