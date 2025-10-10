@@ -5,6 +5,12 @@
 set -e  # 出错立即退出
 START_TIME=$(date +%s)
 
+# 获取脚本所在目录（项目根目录）
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# 切换到项目根目录
+cd "$SCRIPT_DIR"
+
 # 定义颜色
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -34,13 +40,26 @@ function info() {
 }
 
 # 标题
-echo -e "${BLUE}📊 IP API 自动提交工具 (本地优先)${NC}"
+echo -e "${BLUE}📊 Stats API 自动提交工具 (本地优先)${NC}"
 echo "=================================="
+info "工作目录: $SCRIPT_DIR"
 
 # 检查 Git 仓库
 if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
     error "当前目录不是 Git 仓库"
     exit 1
+fi
+
+# 检查是否在正确的仓库
+REPO_URL=$(git config --get remote.origin.url 2>/dev/null || echo "")
+if [[ ! "$REPO_URL" =~ "blog-stats" ]] && [[ ! "$REPO_URL" =~ "stats-api" ]]; then
+    error "警告：当前仓库似乎不是 stats-api 项目"
+    error "仓库地址: $REPO_URL"
+    read -p "是否继续？(y/N) " -n 1 -r
+    echo
+    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+        exit 1
+    fi
 fi
 
 # 检查提交信息
