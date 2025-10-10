@@ -34,7 +34,7 @@ function info() {
 }
 
 # 标题
-echo -e "${BLUE}📊 Stats API 自动提交工具 (本地优先)${NC}"
+echo -e "${BLUE}📊 IP API 自动提交工具 (本地优先)${NC}"
 echo "=================================="
 
 # 检查 Git 仓库
