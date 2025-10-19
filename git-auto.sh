@@ -69,16 +69,28 @@ if [ -z "$1" ]; then
     exit 1
 fi
 
-branch=$(git rev-parse --abbrev-ref HEAD)
-info "当前分支: $branch"
-
-# 拉取远程更新（本地优先）
-step "同步远程分支（本地优先策略）..."
-git fetch origin "$branch"
-if ! git merge -s ours --no-edit "origin/$branch"; then
-    warning "合并冲突，已自动使用本地版本覆盖远程"
+# 检查是否有提交历史
+if git rev-parse --verify HEAD >/dev/null 2>&1; then
+    # 有提交历史
+    branch=$(git rev-parse --abbrev-ref HEAD)
+    info "当前分支: $branch"
+    
+    # 拉取远程更新（本地优先）
+    step "同步远程分支（本地优先策略）..."
+    git fetch origin "$branch" 2>/dev/null || warning "无法连接远程仓库，跳过同步"
+    if git rev-parse "origin/$branch" >/dev/null 2>&1; then
+        if ! git merge -s ours --no-edit "origin/$branch"; then
+            warning "合并冲突，已自动使用本地版本覆盖远程"
+        fi
+        success "远程更新已处理（本地优先）"
+    else
+        warning "远程分支不存在，跳过同步"
+    fi
+else
+    # 新仓库，没有提交历史
+    branch="main"
+    info "新仓库，默认分支: $branch"
 fi
-success "远程更新已处理（本地优先）"
 
 # 检查状态
 step "检查文件状态..."
@@ -101,8 +113,14 @@ else
     success "提交完成"
 
     step "推送到远程 (origin/$branch)..."
-    git push -f origin "$branch"
-    success "推送完成"
+    if git push -u origin "$branch" 2>/dev/null; then
+        success "推送完成"
+    elif git push -f origin "$branch" 2>/dev/null; then
+        success "强制推送完成"
+    else
+        error "推送失败，请检查网络连接"
+        exit 1
+    fi
 fi
 
 END_TIME=$(date +%s)
