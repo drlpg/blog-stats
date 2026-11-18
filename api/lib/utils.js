@@ -31,11 +31,21 @@ export function getCountry(req) {
 }
 
 /**
- * CORS 处理
+ * CORS 处理（根据 ALLOWED_DOMAINS 环境变量限制来源）
  */
-export function setCORSHeaders(res, origin = '*') {
-  // 直接设置允许所有来源，解决本地开发CORS问题
-  res.setHeader('Access-Control-Allow-Origin', '*');
+export function setCORSHeaders(res, origin = '') {
+  const allowedDomainsEnv = process.env.ALLOWED_DOMAINS || '';
+  let allowOrigin = '*';
+
+  if (allowedDomainsEnv && origin) {
+    const allowedList = allowedDomainsEnv.split(',').map(d => d.trim());
+    const isMatched = allowedList.some(domain => origin.includes(domain));
+    if (isMatched) {
+      allowOrigin = origin;
+    }
+  }
+
+  res.setHeader('Access-Control-Allow-Origin', allowOrigin);
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
   res.setHeader('Access-Control-Max-Age', '86400');
